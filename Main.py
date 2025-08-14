@@ -1,13 +1,12 @@
 from myfiles.A_Connection import connect, get_outputs
 from myfiles.B_Extraction import extract
 from myfiles.C_Database import save_info, collection, collection2
-import time
 from myfiles.D_FastAPI import get_connection_details
+import time
 import asyncio
 
 
-
-def control_system():
+def control_system(device):
     # Connects to device via netmiko
     connection = connect(device)
 
@@ -21,9 +20,12 @@ def control_system():
     save_info(collection, mac_address, hostname, interface_data, last_updated)
 
 
-while True:
+# while True:
 
-    for i in range(asyncio.run(get_connection_details()))["details"]:
-        control_system(device)
+#     for device in (asyncio.run(get_connection_details()))["details"]:
+#         control_system(device)
 
-    time.sleep(3600)
+#     time.sleep(3600)
+
+
+control_system(((asyncio.run(get_connection_details()))["details"])[1])
