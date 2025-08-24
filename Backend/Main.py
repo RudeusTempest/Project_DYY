@@ -28,4 +28,4 @@ def control_system(device):
 #     time.sleep(3600)
 
 
-control_system(((asyncio.run(get_connection_details()))["details"])[1])
+control_system(((asyncio.run(get_connection_details()))["details"])[0])

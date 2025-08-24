@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { mockData } from './data';
+// Remove mock data import since we'll fetch from API
+// import { mockData } from './data';
 
 // TypeScript interfaces
 export interface NetworkInterface {
@@ -16,6 +17,8 @@ export interface NetworkDevice {
   "last updated at": string | { $date: string };
 }
 
+// API configuration
+const API_BASE_URL = 'http://localhost:8000';
 
 // Device Card Component
 const DeviceCard: React.FC<{ device: NetworkDevice; onClick: () => void }> = ({ device, onClick }) => {
@@ -171,10 +174,38 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<NetworkDevice | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load mock data (simulating API call)
+  // Fetch data from backend API
+  const fetchDevices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // The backend now returns the devices array directly
+      const devicesData = Array.isArray(data) ? data : [];
+      
+      setDevices(devicesData);
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch devices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data from API on component mount
   useEffect(() => {
-    setDevices(mockData);
+    fetchDevices();
   }, []);
 
   const handleDeviceClick = (device: NetworkDevice) => {
@@ -195,37 +226,79 @@ const NetworkDeviceMonitor: React.FC = () => {
     )
   );
 
+  // Handle refresh button click
+  const handleRefresh = () => {
+    fetchDevices();
+  };
+
   return (
     <div className="app">
       <div className="container">
-        <h1>Network Device Monitor</h1>
+        <div className="header-section">
+          <h1>Network Device Monitor</h1>
+          <button 
+            onClick={handleRefresh} 
+            className="refresh-button"
+            disabled={loading}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+        
+        {/* Error Message */}
+        {error && (
+          <div className="error-message">
+            <p>Error: {error}</p>
+            <button onClick={fetchDevices} className="retry-button">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !error && (
+          <div className="loading-message">
+            <p>Loading devices...</p>
+          </div>
+        )}
         
         {/* Search Bar */}
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search by hostname or IP address..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
+        {!loading && !error && (
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Search by hostname or IP address..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        )}
 
         {/* Device Grid */}
-        <div className="devices-grid">
-          {filteredDevices.map((device, index) => (
-            <DeviceCard
-              key={index}
-              device={device}
-              onClick={() => handleDeviceClick(device)}
-            />
-          ))}
-        </div>
+        {!loading && !error && (
+          <div className="devices-grid">
+            {filteredDevices.map((device, index) => (
+              <DeviceCard
+                key={index}
+                device={device}
+                onClick={() => handleDeviceClick(device)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* No Results */}
-        {filteredDevices.length === 0 && (
+        {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (
           <div className="no-results">
             <p>No devices found matching your search.</p>
+          </div>
+        )}
+
+        {/* No Devices */}
+        {!loading && !error && devices.length === 0 && (
+          <div className="no-devices">
+            <p>No devices found in the database.</p>
           </div>
         )}
 
