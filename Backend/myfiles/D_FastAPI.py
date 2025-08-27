@@ -1,4 +1,4 @@
-from C_Database import collection, collection2
+from Backend.myfiles.C_Database import collection, collection2
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ import json
 
 
 app = FastAPI()
+
 
 # Add CORS middleware
 app.add_middleware(
@@ -39,9 +40,17 @@ async def get_connection_details():
 
 @app.get("/")
 async def get_info():
-    # Convert cursor to list and return the data properly
-    devices = list(collection.find({}, {"_id": 0}))
-    return devices
+    devices_list = list(collection.find({}, {"_id": 0}))
+
+    latest_devices = {}
+    for device in devices_list:
+        mac = device.get("Mac")
+        raw_date = device.get("raw date")
+        
+        # Keep the latest device by raw_date
+        if mac not in latest_devices or raw_date > latest_devices[mac]["raw date"]:
+            latest_devices[mac] = device
+    return list(latest_devices.values())
 
 
 # Add this at the end to run the server

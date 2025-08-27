@@ -1,7 +1,7 @@
 import re
 
 
-def extract(hostname_output, ip_output, mac_output, last_updated):
+def extract(hostname_output, ip_output, mac_output):
     # Extracting the details
     mac_match = re.search(r"address is ([\w\.]+)", mac_output)
     if mac_match:
@@ -30,4 +30,4 @@ def extract(hostname_output, ip_output, mac_output, last_updated):
                 "status": f"{status}/{protocol}"
             })
 
-            return mac_address, hostname, interface_data, last_updated
+    return mac_address, hostname, interface_data

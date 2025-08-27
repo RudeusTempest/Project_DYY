@@ -14,9 +14,9 @@ def create_database():
     return collection, collection2
 
 
-def save_info(collection, mac_address, hostname, interface_data, last_updated):
+def save_info(collection, mac_address, hostname, interface_data, last_updated, raw_date):
     # appendig details to a dict
-    devices_data = {"Mac": mac_address, "hostname": hostname, "interface": interface_data, "last updated at": last_updated}
+    devices_data = {"Mac": mac_address, "hostname": hostname, "interface": interface_data, "last updated at": last_updated, "raw date": raw_date}
 
     # Insert the data into the MongoDB collection
     collection.insert_one(devices_data)
