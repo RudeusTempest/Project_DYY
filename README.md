@@ -7,12 +7,12 @@ A full-stack application for monitoring network devices with a React frontend an
 ```
 Project_DYY/
 ├── Backend/           # FastAPI backend
-│   ├── Main.py
-│   └── myfiles/
+│   └── app/
 │       ├── A_Connection.py
 │       ├── B_Extraction.py
 │       ├── C_Database.py
-│       └── D_FastAPI.py
+│       ├── D_FastAPI.py
+│       └── Main.py
 └── Frontend/          # React frontend
     ├── src/
     │   ├── App.tsx

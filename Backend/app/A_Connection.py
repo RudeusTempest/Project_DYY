@@ -1,4 +1,4 @@
-from netmiko import ConnectHandler
+from netmiko import ConnectHandler 
 from datetime import datetime
 import re
 
