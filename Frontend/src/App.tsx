@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import './App.css';
-// Remove mock data import since we'll fetch from API
-// import { mockData } from './data';
+import { mockData } from './data';
 
 // TypeScript interfaces
 export interface NetworkInterface {
@@ -176,12 +176,14 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usingMockData, setUsingMockData] = useState(false);
 
   // Fetch data from backend API
   const fetchDevices = async () => {
     try {
       setLoading(true);
       setError(null);
+      setUsingMockData(false);
       
       const response = await fetch(`${API_BASE_URL}/`);
       
@@ -194,10 +196,22 @@ const NetworkDeviceMonitor: React.FC = () => {
       // The backend now returns the devices array directly
       const devicesData = Array.isArray(data) ? data : [];
       
-      setDevices(devicesData);
+      // If no devices found in database, use mock data
+      if (devicesData.length === 0) {
+        console.log('No devices found in database, using mock data');
+        setDevices(mockData);
+        setUsingMockData(true);
+      } else {
+        setDevices(devicesData);
+        setUsingMockData(false);
+      }
     } catch (err) {
       console.error('Error fetching devices:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch devices');
+      // On error, also fall back to mock data
+      console.log('API request failed, using mock data');
+      setDevices(mockData);
+      setUsingMockData(true);
+      setError(null); // Clear error since we're using mock data as fallback
     } finally {
       setLoading(false);
     }
@@ -244,6 +258,13 @@ const NetworkDeviceMonitor: React.FC = () => {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
+
+        {/* Mock Data Indicator */}
+        {usingMockData && !loading && (
+          <div className="mock-data-banner">
+            <p>⚠️ Using mock data - No devices found in database or API unavailable</p>
+          </div>
+        )}
         
         {/* Error Message */}
         {error && (
@@ -292,13 +313,6 @@ const NetworkDeviceMonitor: React.FC = () => {
         {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (
           <div className="no-results">
             <p>No devices found matching your search.</p>
-          </div>
-        )}
-
-        {/* No Devices */}
-        {!loading && !error && devices.length === 0 && (
-          <div className="no-devices">
-            <p>No devices found in the database.</p>
           </div>
         )}
 

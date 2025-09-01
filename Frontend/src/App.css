@@ -73,6 +73,35 @@ body {
   transform: translateY(0);
 }
 
+/* Mock Data Banner */
+.mock-data-banner {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  text-align: center;
+  animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mock-data-banner p {
+  color: #92400e;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
 /* Loading and error states */
 .loading-message {
   text-align: center;
@@ -586,6 +615,14 @@ h1 {
   .refresh-button {
     align-self: center;
   }
+  
+  .mock-data-banner {
+    margin-bottom: 20px;
+  }
+  
+  .mock-data-banner p {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -626,5 +663,13 @@ h1 {
     width: 50px;
     height: 50px;
     font-size: 0.9rem;
+  }
+  
+  .mock-data-banner {
+    padding: 14px 16px;
+  }
+  
+  .mock-data-banner p {
+    font-size: 0.95rem;
   }
 }
