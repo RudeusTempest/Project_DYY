@@ -1,6 +1,6 @@
-from A_Connection import connect, get_outputs
-from B_Extraction import extract
-from C_Database import save_info, get_database
+from app.A_Connection import connect, get_outputs
+from app.B_Extraction import extract
+from app.C_Database import save_info, get_database
 import time
 
 

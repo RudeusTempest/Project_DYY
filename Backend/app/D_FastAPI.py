@@ -1,5 +1,5 @@
-from C_Database import info_collection, cred_collection, archive
-from Main import control_system
+from app.C_Database import info_collection, cred_collection, archive
+from app.Main import control_system
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -43,7 +43,7 @@ async def get_all_cred():
 async def get_info():
     devices_list = list(info_collection.find({}, {"_id": 0}))
 
-    latest_devices = {}
+    latest_devices = {}                 
     for device in devices_list:
         mac = device.get("mac")
         raw_date = device.get("raw date")
