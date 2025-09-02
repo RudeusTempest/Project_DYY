@@ -29,8 +29,8 @@ def save_info(mac_address, hostname, interface_data, last_updated, raw_date):
         # Delete device info from info_collection
         info_collection.delete_one(device)
 
-    # insert device info to archive
-    archive.insert_one(device)
+        # insert device info to archive
+        archive.insert_one(device)
 
     # Insert the latest device data into the MongoDB info collection
     info_collection.insert_one(latest_device_data)
