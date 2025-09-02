@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { mockData } from './data';
 
@@ -20,10 +19,90 @@ export interface NetworkDevice {
 // API configuration
 const API_BASE_URL = 'http://localhost:8000';
 
-// Device Card Component
-const DeviceCard: React.FC<{ device: NetworkDevice; onClick: () => void }> = ({ device, onClick }) => {
+// Device Statistics Component - Now includes search and mock banner
+const DeviceStatistics: React.FC<{ 
+  devices: NetworkDevice[];
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  usingMockData: boolean;
+  loading: boolean;
+}> = ({ devices, searchTerm, onSearchChange, usingMockData, loading }) => {
+  const stats = devices.reduce(
+    (acc, device) => {
+      acc.total++;
+      
+      const hasActivePort = device.interface.some(port => port.status.includes('up/up'));
+      if (device.hostname === "Hostname not found") {
+        acc.unauthorized++;
+      } else if (hasActivePort) {
+        acc.active++;
+      } else {
+        acc.inactive++;
+      }
+      
+      return acc;
+    },
+    { total: 0, active: 0, inactive: 0, unauthorized: 0 }
+  );
+
+  return (
+    <div className="sidebar">
+      <div className="sidebar-content">
+        <h3>Device Monitor</h3>
+        
+        {/* Mock Data Banner in Sidebar */}
+        {usingMockData && !loading && (
+          <div className="sidebar-mock-banner">
+            <p>⚠️ Using mock data - API unavailable</p>
+          </div>
+        )}
+        
+        {/* Search Bar in Sidebar */}
+        {!loading && (
+          <div className="sidebar-search">
+            <input
+              type="text"
+              placeholder="Search devices..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+        )}
+        
+        <div className="sidebar-separator"></div>
+        
+        <div className="stat-item total">
+          <div className="stat-label">Total Devices</div>
+          <div className="stat-value">{stats.total}</div>
+        </div>
+        
+        <div className="stat-item active">
+          <div className="stat-label">Active</div>
+          <div className="stat-value">{stats.active}</div>
+        </div>
+        
+        <div className="stat-item inactive">
+          <div className="stat-label">Inactive</div>
+          <div className="stat-value">{stats.inactive}</div>
+        </div>
+        
+        <div className="stat-item unauthorized">
+          <div className="stat-label">Unauthorized</div>
+          <div className="stat-value">{stats.unauthorized}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Device List Item Component
+const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void }> = ({ device, onClick }) => {
   // Get primary IP address from first interface
   const primaryIP = device.interface[0]?.ip_address || 'No IP';
+  
+  // Count active/total interfaces
+  const activeInterfaces = device.interface.filter(port => port.status.includes('up/up')).length;
+  const totalInterfaces = device.interface.length;
   
   // Determine overall device status based on interfaces
   const getDeviceStatus = () => {
@@ -34,20 +113,44 @@ const DeviceCard: React.FC<{ device: NetworkDevice; onClick: () => void }> = ({ 
 
   const status = getDeviceStatus();
 
+  // Format last updated date
+  const formatLastUpdated = (lastUpdated: string | { $date: string }) => {
+    if (typeof lastUpdated === 'string') {
+      return lastUpdated;
+    }
+    return new Date(lastUpdated.$date).toLocaleString();
+  };
+
   return (
     <div 
       onClick={onClick}
-      className={`device-card ${status.toLowerCase()}`}
+      className={`device-list-item ${status.toLowerCase()}`}
     >
-      <div className="device-info">
-        <div>
+      <div className="device-list-content">
+        <div className="device-primary-info">
           <h3>{device.hostname}</h3>
-          <p>IP: {primaryIP}</p>
+          <div className="device-meta">
+            <span className="ip-address">{primaryIP}</span>
+            <span className="mac-address">{device.Mac}</span>
+          </div>
         </div>
-        <div className="status-badge">
-          <span className={`status ${status.toLowerCase()}`}>
+        
+        <div className="device-secondary-info">
+          <div className="interface-count">
+            <span className="active-count">{activeInterfaces}</span>
+            <span className="separator">/</span>
+            <span className="total-count">{totalInterfaces}</span>
+            <span className="label">Interfaces</span>
+          </div>
+          <div className="last-updated">
+            Last updated: {formatLastUpdated(device["last updated at"])}
+          </div>
+        </div>
+        
+        <div className="device-status-info">
+          <div className={`status ${status.toLowerCase()}`}>
             {status}
-          </span>
+          </div>
         </div>
       </div>
     </div>
@@ -178,6 +281,8 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
 
+  const headerRef = useRef<HTMLDivElement>(null);
+
   // Fetch data from backend API
   const fetchDevices = async () => {
     try {
@@ -222,6 +327,28 @@ const NetworkDeviceMonitor: React.FC = () => {
     fetchDevices();
   }, []);
 
+  // Update header height dynamically
+  useEffect(() => {
+    const updateHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--header-height', `${height}px`);
+      }
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    const observer = new MutationObserver(updateHeight);
+    if (headerRef.current) {
+      observer.observe(headerRef.current, { childList: true, subtree: true });
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      observer.disconnect();
+    };
+  }, []);
+
   const handleDeviceClick = (device: NetworkDevice) => {
     setSelectedDevice(device);
     setIsModalOpen(true);
@@ -247,82 +374,80 @@ const NetworkDeviceMonitor: React.FC = () => {
 
   return (
     <div className="app">
-      <div className="container">
-        <div className="header-section">
-          <h1>Network Device Monitor</h1>
-          <button 
-            onClick={handleRefresh} 
-            className="refresh-button"
-            disabled={loading}
-          >
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-
-        {/* Mock Data Indicator */}
-        {usingMockData && !loading && (
-          <div className="mock-data-banner">
-            <p>⚠️ Using mock data - No devices found in database or API unavailable</p>
-          </div>
-        )}
-        
-        {/* Error Message */}
-        {error && (
-          <div className="error-message">
-            <p>Error: {error}</p>
-            <button onClick={fetchDevices} className="retry-button">
-              Retry
+      <div className="app-header" ref={headerRef}>
+        <div className="header-container">
+          <div className="header-section">
+            <h1>Network Device Monitor</h1>
+            <button 
+              onClick={handleRefresh} 
+              className="refresh-button"
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Loading State */}
-        {loading && !error && (
-          <div className="loading-message">
-            <p>Loading devices...</p>
-          </div>
+      <div className="app-layout">
+        {/* Sidebar with Statistics, Search, and Mock Banner */}
+        {!error && (
+          <DeviceStatistics 
+            devices={filteredDevices} 
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            usingMockData={usingMockData}
+            loading={loading}
+          />
         )}
         
-        {/* Search Bar */}
-        {!loading && !error && (
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search by hostname or IP address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-        )}
+        {/* Main Content */}
+        <div className="main-content">
+          {/* Error Message */}
+          {error && (
+            <div className="error-message">
+              <p>Error: {error}</p>
+              <button onClick={fetchDevices} className="retry-button">
+                Retry
+              </button>
+            </div>
+          )}
 
-        {/* Device Grid */}
-        {!loading && !error && (
-          <div className="devices-grid">
-            {filteredDevices.map((device, index) => (
-              <DeviceCard
-                key={index}
-                device={device}
-                onClick={() => handleDeviceClick(device)}
-              />
-            ))}
-          </div>
-        )}
+          {/* Loading State */}
+          {loading && !error && (
+            <div className="loading-message">
+              <p>Loading devices...</p>
+            </div>
+          )}
 
-        {/* No Results */}
-        {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (
-          <div className="no-results">
-            <p>No devices found matching your search.</p>
-          </div>
-        )}
+          {/* Device List */}
+          {!loading && !error && (
+            <div className="devices-list">
+              {filteredDevices.map((device, index) => (
+                <DeviceListItem
+                  key={index}
+                  device={device}
+                  onClick={() => handleDeviceClick(device)}
+                />
+              ))}
+            </div>
+          )}
 
-        {/* Modal */}
-        <DeviceModal
-          device={selectedDevice}
-          isOpen={isModalOpen}
-          onClose={closeModal}
-        />
+          {/* No Results */}
+          {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (
+            <div className="no-results">
+              <p>No devices found matching your search.</p>
+            </div>
+          )}
+        </div>
       </div>
+      
+      {/* Modal */}
+      <DeviceModal
+        device={selectedDevice}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+      />
     </div>
   );
 };

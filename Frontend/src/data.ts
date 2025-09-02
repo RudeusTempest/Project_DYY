@@ -617,5 +617,32 @@ export const mockData: NetworkDevice[] = [
       }
     ],
     "last updated at": "18-08-2025 16:40:12"
-  }
+  },
+  {
+  "Mac": "dead.beef.0000",
+  "hostname": "inactive-router-21",
+  "interface": [
+    {
+      "interface": "Ethernet0/0",
+      "ip_address": "192.168.99.1",
+      "status": "down/down"
+    },
+    {
+      "interface": "Ethernet0/1",
+      "ip_address": "unassigned",
+      "status": "administratively/down"
+    },
+    {
+      "interface": "Ethernet0/2",
+      "ip_address": "unassigned",
+      "status": "down/down"
+    },
+    {
+      "interface": "Ethernet0/3",
+      "ip_address": "unassigned",
+      "status": "administratively/down"
+    }
+  ],
+  "last updated at": "02-09-2025 17:00:00"
+}
 ];
