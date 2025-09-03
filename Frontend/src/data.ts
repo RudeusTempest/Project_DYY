@@ -1,4 +1,4 @@
-import {NetworkDevice, NetworkInterface} from "./App";
+import { NetworkDevice } from "./types";
 export const mockData: NetworkDevice[] = [
   {
     "Mac": "aabb.cc02.b000",
