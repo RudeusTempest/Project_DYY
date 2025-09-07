@@ -61,7 +61,7 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Device Details</h2>
-          <button onClick={onClose} className="close-button">A-</button>
+          <button onClick={onClose} className="close-button">X</button>
         </div>
 
         <div className="modal-body">

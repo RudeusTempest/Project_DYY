@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { mockData } from './data';
 import Header from './components/Header';
@@ -20,7 +20,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
 
-  const headerRef = useRef<HTMLDivElement>(null);
+  
 
   // Fetch data from backend API
   const fetchDevices = async () => {
@@ -63,27 +63,7 @@ const NetworkDeviceMonitor: React.FC = () => {
     fetchDevices();
   }, []);
 
-  // Update header height dynamically
-  useEffect(() => {
-    const updateHeight = () => {
-      if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
-        document.documentElement.style.setProperty('--header-height', `${height}px`);
-      }
-    };
-
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    const observer = new MutationObserver(updateHeight);
-    if (headerRef.current) {
-      observer.observe(headerRef.current, { childList: true, subtree: true });
-    }
-
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      observer.disconnect();
-    };
-  }, []);
+  // Removed dynamic header height update effect as unnecessary
 
   const handleDeviceClick = (device: NetworkDevice) => {
     setSelectedDevice(device);
@@ -109,7 +89,6 @@ const NetworkDeviceMonitor: React.FC = () => {
   return (
     <div className="app">
       <Header
-        ref={headerRef}
         loading={loading}
         onRefresh={handleRefresh}
         searchTerm={searchTerm}
