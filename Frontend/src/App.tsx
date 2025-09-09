@@ -29,7 +29,7 @@ const NetworkDeviceMonitor: React.FC = () => {
       setError(null);
       setUsingMockData(false);
 
-      const response = await fetch(`${API_BASE_URL}/get_all`);
+      const response = await fetch(`${API_BASE_URL}/devices/get_all`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
