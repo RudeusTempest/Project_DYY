@@ -1,11 +1,13 @@
 from src.config.database import db
 
+
 cred_collection = db["devices_cred"]
+
 
 class CredentialsRepo:  
 
     @staticmethod
-    def add_device(cred : dict):
+    def add_device(cred: dict):
         cred_collection.insert_one(cred)
 
 

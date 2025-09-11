@@ -1,5 +1,5 @@
 from src.repositories.devices_repo import DevicesRepo
-from src.services.connection_service import connect, get_outputs
+from src.services.connection import connect, get_outputs
 from src.services.extraction import extract
 from src.services.credentials import CredentialsService
 
@@ -38,7 +38,7 @@ class DeviceService:
     @staticmethod
     def refresh_by_ip(ip: str):
         from src.services.credentials import CredentialsService
-        cred = CredentialsService.service_get_one_cred(ip)
+        cred = CredentialsService.get_one_cred(ip)
         if not cred:
             return None
         
@@ -54,7 +54,7 @@ class DeviceService:
         # Run control_system for all devices periodically (blocking).
         import time
         while True:
-            creds = CredentialsService.get_all()
+            creds = CredentialsService.get_all_cred()
             for device in creds:
                 DeviceService.control_system(device)
             time.sleep(interval)
