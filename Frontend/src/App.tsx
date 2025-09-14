@@ -77,10 +77,15 @@ const NetworkDeviceMonitor: React.FC = () => {
   };
 
   // Filter devices based on search term
-  const filteredDevices = devices.filter(device =>
-    device.hostname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.interface.some(port => port.ip_address.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const toLower = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v)).toLowerCase();
+  const filteredDevices = devices.filter((device: any) => {
+    const term = toLower(searchTerm);
+    const hostname = toLower(device?.hostname);
+    const interfaces = Array.isArray(device?.interface) ? device.interface : [];
+    const hostMatch = hostname.includes(term);
+    const ipMatch = interfaces.some((port: any) => toLower(port?.ip_address).includes(term));
+    return hostMatch || ipMatch;
+  });
 
   // Handle refresh button click
   const handleRefresh = () => {

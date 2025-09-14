@@ -9,7 +9,8 @@ type DeviceListProps = {
 };
 
 const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void; onRefresh: (ip: string) => void; isRefreshing?: boolean }> = ({ device, onClick, onRefresh, isRefreshing }) => {
-  const primaryIP = device.interface[0]?.ip_address || 'No IP';
+  const rawPrimaryIP: any = device.interface?.[0]?.ip_address;
+  const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
 
   const activeInterfaces = device.interface.filter(port => port.status.includes('up/up')).length;
   const totalInterfaces = device.interface.length;
