@@ -19,6 +19,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
+  const [refreshingIp, setRefreshingIp] = useState<string | null>(null);
 
   
 
@@ -86,6 +87,22 @@ const NetworkDeviceMonitor: React.FC = () => {
     fetchDevices();
   };
 
+  // Refresh a single device by IP
+  const handleRefreshDevice = async (ip: string) => {
+    try {
+      setRefreshingIp(ip);
+      await fetch(`${API_BASE_URL}/refresh_one?ip=${encodeURIComponent(ip)}`, {
+        method: 'POST',
+      });
+      // Re-fetch devices to reflect updated data
+      await fetchDevices();
+    } catch (err) {
+      console.error('Error refreshing device:', err);
+    } finally {
+      setRefreshingIp(null);
+    }
+  };
+
   return (
     <div className="app">
       <Header
@@ -119,7 +136,12 @@ const NetworkDeviceMonitor: React.FC = () => {
           )}
 
           {!loading && !error && (
-            <DeviceList devices={filteredDevices} onDeviceClick={handleDeviceClick} />
+            <DeviceList
+              devices={filteredDevices}
+              onDeviceClick={handleDeviceClick}
+              onRefreshDevice={handleRefreshDevice}
+              refreshingIp={refreshingIp}
+            />
           )}
 
           {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (

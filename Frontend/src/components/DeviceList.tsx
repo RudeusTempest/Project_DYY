@@ -4,9 +4,11 @@ import { NetworkDevice } from '../types';
 type DeviceListProps = {
   devices: NetworkDevice[];
   onDeviceClick: (device: NetworkDevice) => void;
+  onRefreshDevice: (ip: string) => void;
+  refreshingIp?: string | null;
 };
 
-const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void }> = ({ device, onClick }) => {
+const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void; onRefresh: (ip: string) => void; isRefreshing?: boolean }> = ({ device, onClick, onRefresh, isRefreshing }) => {
   const primaryIP = device.interface[0]?.ip_address || 'No IP';
 
   const activeInterfaces = device.interface.filter(port => port.status.includes('up/up')).length;
@@ -54,21 +56,39 @@ const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void }> =
           <div className={`status ${status.toLowerCase()}`}>
             {status}
           </div>
+          <button
+            className="refresh-device-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (primaryIP && primaryIP !== 'No IP' && primaryIP !== 'unassigned') {
+                onRefresh(primaryIP);
+              }
+            }}
+            title="Refresh this device"
+            disabled={!!isRefreshing}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick }) => {
+const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick, onRefreshDevice, refreshingIp }) => {
   return (
     <div className="devices-list">
       {devices.map((device, index) => (
-        <DeviceListItem key={index} device={device} onClick={() => onDeviceClick(device)} />
+        <DeviceListItem
+          key={index}
+          device={device}
+          onClick={() => onDeviceClick(device)}
+          onRefresh={onRefreshDevice}
+          isRefreshing={device.interface[0]?.ip_address === refreshingIp}
+        />
       ))}
     </div>
   );
 };
 
 export default DeviceList;
-
