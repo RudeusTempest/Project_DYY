@@ -11,9 +11,9 @@ class CredentialsService:
 
     @staticmethod
     def get_all_cred():   
-        CredentialsRepo.get_all_cred()  
+        return CredentialsRepo.get_all_cred()  
 
 
     @staticmethod
     def get_one_cred(ip: str):
-        CredentialsRepo.get_one_cred(ip)     
+        return CredentialsRepo.get_one_cred(ip)     

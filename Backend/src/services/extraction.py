@@ -30,4 +30,4 @@ def extract(hostname_output, ip_output, mac_output):
                 "status": f"{status}/{protocol}"
             })
 
-    return hostname, interface_data, mac_address
+    return mac_address, hostname, interface_data

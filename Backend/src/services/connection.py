@@ -4,9 +4,12 @@ import re
 
 
 def connect(device):
-    # Connecting to the router
-    net_connect = ConnectHandler(**device)
-    return net_connect
+    try:
+        # Connecting to the router
+        net_connect = ConnectHandler(**device)
+        return net_connect
+    except:
+        print("Connection failed")
 
 
 def get_device_type(net_connect):
@@ -20,7 +23,6 @@ def get_device_type(net_connect):
 
 
 def get_outputs(net_connect):
-
     # Getting device type 
     device_type = get_device_type(net_connect)
 
