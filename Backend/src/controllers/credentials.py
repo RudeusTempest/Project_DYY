@@ -4,8 +4,8 @@ from src.services.credentials import CredentialsService
 class CredentialsController:
     
     @staticmethod
-    def add_device(cred):
-        CredentialsService.add_device(cred)
+    def add_device_cred(cred):
+        CredentialsService.add_device_cred(cred)
         
     @staticmethod
     def get_all_cred():

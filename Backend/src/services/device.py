@@ -1,15 +1,17 @@
-from src.repositories.devices_repo import DevicesRepo
+from Backend.src.repositories.devices import DevicesRepo
 from src.services.connection import connect, get_outputs
 from src.services.extraction import extract
 from src.services.credentials import CredentialsService
 
 
 class DeviceService:
-
+ 
     @staticmethod
-    def control_system(device):
+    def update_device_info(cred):
         # Connects to device via netmiko
-        connection = connect(device)
+        connection = connect(cred)
+        if not connection:
+            return "Error: Unable to connect to the device with the provided credentials."
 
         # Sends commands & recieve outputs
         hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection)
@@ -40,13 +42,8 @@ class DeviceService:
         from src.services.credentials import CredentialsService
         cred = CredentialsService.get_one_cred(ip)
         if not cred:
-            return None
-        
-        connection = connect(cred)
-        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection)
-        hostname, interface_data, mac_address = extract(hostname_output, ip_output, mac_output)
-
-        return DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+            return "Eror: No credentials found for the given IP."
+        return DeviceService.update_device_info(cred)
 
 
     @staticmethod
@@ -56,5 +53,5 @@ class DeviceService:
         while True:
             creds = CredentialsService.get_all_cred()
             for device in creds:
-                DeviceService.control_system(device)
+                DeviceService.update_device_info(device)
             time.sleep(interval)

@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.post("/add_device")    
 async def add_device(cred: device_cred):
-    CredentialsController.add_device(cred)
+    CredentialsController.add_device_cred(cred)
     
 
 @router.get("/connection_details")
