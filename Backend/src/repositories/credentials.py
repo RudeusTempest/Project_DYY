@@ -19,5 +19,5 @@ class CredentialsRepo:
 
     @staticmethod
     def get_one_cred(ip: str):
-        device = cred_collection.find_one({"ip": ip}, {"_id": 0})
-        return device
+        device_cred = cred_collection.find_one({"ip": ip}, {"_id": 0})
+        return device_cred

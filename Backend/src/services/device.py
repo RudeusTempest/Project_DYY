@@ -1,4 +1,4 @@
-from Backend.src.repositories.devices import DevicesRepo
+from src.repositories.devices import DevicesRepo
 from src.services.connection import connect, get_outputs
 from src.services.extraction import extract
 from src.services.credentials import CredentialsService
@@ -14,10 +14,10 @@ class DeviceService:
             return "Error: Unable to connect to the device with the provided credentials."
 
         # Sends commands & recieve outputs
-        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection)
+        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection, cred["device_type"])
 
         # Extracting details via regex
-        mac_address, hostname, interface_data = extract(hostname_output, ip_output, mac_output)
+        mac_address, hostname, interface_data = extract(cred["device_type"], hostname_output, ip_output, mac_output)
 
         # Saves details in database
         DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)

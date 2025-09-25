@@ -3,37 +3,26 @@ from datetime import datetime
 import re
 
 
-def connect(device):
+def connect(device_cred):
     try:
         # Connecting to the router
-        net_connect = ConnectHandler(**device)
+        net_connect = ConnectHandler(**device_cred)
         return net_connect
     except:
         print("Connection failed")
 
 
-def get_device_type(net_connect):
-    # Identifying device type
-    version_output = net_connect.send_command("show version")
-    if "IOS XR" in version_output:
-        device_type = "xr"
-    else:
-        device_type = "ios"
-    return device_type
+def get_outputs(net_connect, device_type):
 
-
-def get_outputs(net_connect):
-    # Getting device type 
-    device_type = get_device_type(net_connect)
-
-
-    if device_type == "ios":
+    if device_type == "cisco_ios":
+        # Entering enable mode
         net_connect.enable()
 
         # Getting commands outputs
         hostname_output = net_connect.send_command("show running-config | include hostname")
         ip_output = net_connect.send_command("show ip interface brief")
 
+        # Getting the first interface from the second line of the output
         interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[1:2].pop())
         if interface_output:
             interface_0 = interface_output.group(1)
@@ -48,4 +37,33 @@ def get_outputs(net_connect):
 
         return hostname_output, ip_output, mac_output, last_updated, raw_date
     
-    # if device_type == "xr":
+
+    # if device_type == "cisco_xr":
+
+
+    # if device_type == "junipersrx":
+
+
+    if device_type == "juniper_junos":
+        # Entering cli mode
+        net_connect.send_command("cli")
+        # Disabling pagination
+        net_connect.send_command("set cli screen-length 0")
+        
+        # Getting commands outputs
+        hostname_output = net_connect.send_command("show configuration system host-name")
+        ip_output = net_connect.send_command("show interfaces terse")
+
+        interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[1:2].pop())
+        if interface_output:
+            interface_0 = interface_output.group(1)
+        else: interface_0 = "Not found"    
+
+        mac_output = net_connect.send_command(f"show interfaces {interface_0} | match Hardware")
+        raw_date = datetime.now()
+        last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
+
+        # Close the connection
+        net_connect.disconnect()
+
+        return hostname_output, ip_output, mac_output, last_updated, raw_date

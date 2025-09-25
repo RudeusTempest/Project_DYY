@@ -1,4 +1,4 @@
-from Backend.src.repositories.credentials import CredentialsRepo
+from src.repositories.credentials import CredentialsRepo
 from src.models.device import device_cred
 
 
