@@ -13,8 +13,9 @@ const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }
       <h4>Port Status</h4>
       <div className="ports-grid">
         {interfaces.map((port, index) => {
-          const isActive = port.status.includes('up/up');
-          const isUnauthorized = port.status.includes('not/authorized');
+          const status = typeof port?.status === 'string' ? port.status : '';
+          const isActive = status.includes('up/up');
+          const isUnauthorized = status.includes('not/authorized');
 
           let portClass = 'port-inactive';
           if (isActive) portClass = 'port-active';
@@ -100,7 +101,7 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
                         </button>
                       )}
                     </div>
-                    <div>Status: {port.status}</div>
+                    <div>Status: {typeof port?.status === 'string' ? port.status : 'unknown'}</div>
                   </div>
                 ))}
               </div>

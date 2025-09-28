@@ -9,14 +9,15 @@ type DeviceListProps = {
 };
 
 const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void; onRefresh: (ip: string) => void; isRefreshing?: boolean }> = ({ device, onClick, onRefresh, isRefreshing }) => {
-  const rawPrimaryIP: any = device.interface?.[0]?.ip_address;
+  const rawPrimaryIP: any = Array.isArray(device.interface) ? device.interface?.[0]?.ip_address : undefined;
   const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
 
-  const activeInterfaces = device.interface.filter(port => port.status.includes('up/up')).length;
-  const totalInterfaces = device.interface.length;
+  const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
+  const activeInterfaces = safeInterfaces.filter(port => typeof port?.status === 'string' && port.status.includes('up/up')).length;
+  const totalInterfaces = safeInterfaces.length;
 
   const getDeviceStatus = () => {
-    const hasActivePort = device.interface.some(port => port.status.includes('up/up'));
+    const hasActivePort = safeInterfaces.some(port => typeof port?.status === 'string' && port.status.includes('up/up'));
     if (device.hostname === "Hostname not found") return 'Unauthorized';
     return hasActivePort ? 'Active' : 'Inactive';
   };
@@ -49,7 +50,7 @@ const DeviceListItem: React.FC<{ device: NetworkDevice; onClick: () => void; onR
             <span className="label">Interfaces</span>
           </div>
           <div className="last-updated">
-            Last updated: {formatLastUpdated(device["last updated at"])}
+            Last updated: {formatLastUpdated(device["last updated at"] as any)}
           </div>
         </div>
 
@@ -85,7 +86,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick, onRefre
           device={device}
           onClick={() => onDeviceClick(device)}
           onRefresh={onRefreshDevice}
-          isRefreshing={device.interface[0]?.ip_address === refreshingIp}
+          isRefreshing={(Array.isArray(device.interface) ? device.interface[0]?.ip_address : undefined) === refreshingIp}
         />
       ))}
     </div>

@@ -27,7 +27,7 @@ class DevicesRepo:
 
             # Move old record to archive
             archive.insert_one(record)
-            info_collection.delete_one(record)
+            info_collection.delete_one({"mac": mac_address})
 
         # Insert the latest device data into the MongoDB info collection
         info_collection.insert_one(latest_device_data)
