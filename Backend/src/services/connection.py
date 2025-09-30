@@ -16,7 +16,7 @@ def get_outputs(net_connect, device_type):
 
     if device_type == "cisco_ios":
         # Entering enable mode
-        net_connect.enable()
+        # net_connect.enable()
 
         # Getting commands outputs
         hostname_output = net_connect.send_command("show running-config | include hostname")
