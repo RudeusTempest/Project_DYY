@@ -9,12 +9,13 @@ archive = db["archive"]
 class DevicesRepo:
 
     @staticmethod
-    def save_info(mac_address: str, hostname: str, interface_data: list, last_updated: str, raw_date):
+    def save_info(mac_address: str, hostname: str, interface_data: list, info_neighbors: list, last_updated: str, raw_date):
         # appendig details to a dict
         latest_device_data = {
             "mac": mac_address,
             "hostname": hostname, 
-            "interface": interface_data, 
+            "interface": interface_data,
+            "info_neighbors": info_neighbors, 
             "last updated at": last_updated, 
             "raw date": raw_date
             }

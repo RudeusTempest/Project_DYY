@@ -1,7 +1,7 @@
 import re
 
 
-def extract(device_type, hostname_output, ip_output, mac_output):
+def extract(device_type, hostname_output, ip_output, mac_output, info_neighbors_output):
 
     if device_type == "cisco_ios":
 
@@ -32,8 +32,19 @@ def extract(device_type, hostname_output, ip_output, mac_output):
                     "ip_address": ip,
                     "status": f"{status}/{protocol}"
                 })
+        info_neighbors = []
+        lines = info_neighbors_output.splitlines()[1:]  
+        for line in lines:
+            parts = re.split(r"\s{2,}", line.strip())
+            if len(parts) >= 3:
+                neighbor = {
+                    "device_id": parts[0],         
+                    "local_interface": parts[1],   
+                    "port_id": parts[-1]           
+                }
+                info_neighbors.append(neighbor)
 
-        return mac_address, hostname, interface_data
+        return mac_address, hostname, interface_data, info_neighbors
     
 
     # if device_type == "cisco_xr":
@@ -86,5 +97,7 @@ def extract(device_type, hostname_output, ip_output, mac_output):
                     "IP_Address": ip_address,
                     "Remote IP": remote_ip
                 })
+                
+        
 
         return mac_address, hostname, interface_data

@@ -32,10 +32,11 @@ def get_outputs(net_connect, device_type):
         raw_date = datetime.now()
         last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
+        info_neighbors_output = net_connect.send_command("show cdp neighbors")
         # Close the connection
         net_connect.disconnect()
 
-        return hostname_output, ip_output, mac_output, last_updated, raw_date
+        return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
     
 
     # if device_type == "cisco_xr":

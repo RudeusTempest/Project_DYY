@@ -14,13 +14,13 @@ class DeviceService:
             return "Error: Unable to connect to the device with the provided credentials."
 
         # Sends commands & recieve outputs
-        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection, cred["device_type"])
+        hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = get_outputs(connection)
 
         # Extracting details via regex
-        mac_address, hostname, interface_data = extract(cred["device_type"], hostname_output, ip_output, mac_output)
+        mac_address, hostname, interface_data, info_neighbors = extract(hostname_output, ip_output, mac_output, info_neighbors_output)
 
         # Saves details in database
-        DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+        DevicesRepo.save_info(mac_address, hostname, interface_data, info_neighbors, last_updated, raw_date)
 
 
     @staticmethod
@@ -42,8 +42,13 @@ class DeviceService:
         from src.services.credentials import CredentialsService
         cred = CredentialsService.get_one_cred(ip)
         if not cred:
-            return "Eror: No credentials found for the given IP."
-        return DeviceService.update_device_info(cred)
+            return None
+        
+        connection = connect(cred)
+        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection)
+        hostname, interface_data, mac_address = extract(hostname_output, ip_output, mac_output)
+
+        return DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
 
 
     @staticmethod
