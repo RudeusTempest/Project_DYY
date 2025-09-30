@@ -1,6 +1,6 @@
 from src.repositories.devices import DevicesRepo
-from src.services.connection import connect, get_outputs
-from src.services.extraction import extract
+from src.services.connection import connect, get_cisco_outputs, get_juniper_outputs
+from src.services.extraction import extract_cisco, extract_juniper
 from src.services.credentials import CredentialsService
 
 
@@ -8,19 +8,30 @@ class DeviceService:
  
     @staticmethod
     def update_device_info(cred):
+
         # Connects to device via netmiko
         connection = connect(cred)
-        if not connection:
-            return "Error: Unable to connect to the device with the provided credentials."
 
-        # Sends commands & recieve outputs
-        hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = get_outputs(connection)
+        if "cisco" in cred["device_type"]:
+            # Sends commands & recieve outputs
+            hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = get_cisco_outputs(connection, cred["device_type"])
 
-        # Extracting details via regex
-        mac_address, hostname, interface_data, info_neighbors = extract(hostname_output, ip_output, mac_output, info_neighbors_output)
+            # Extracting details via regex
+            mac_address, hostname, interface_data, info_neighbors = extract_cisco(cred["device_type"], hostname_output, ip_output, mac_output, info_neighbors_output)
 
-        # Saves details in database
-        DevicesRepo.save_info(mac_address, hostname, interface_data, info_neighbors, last_updated, raw_date)
+            # Saves details in database
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+            
+
+        elif "juniper" in cred["device_type"]:
+            # Sends commands & recieve outputs
+            hostname_output, ip_output, mac_output, last_updated, raw_date = get_juniper_outputs(connection, cred["device_type"])
+
+            # Extracting details via regex
+            mac_address, hostname, interface_data = extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
+
+            # Saves details in database
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
 
 
     @staticmethod
