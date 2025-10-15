@@ -10,4 +10,4 @@ class DeviceController:
 
     @staticmethod
     def refresh_by_ip(ip):
-        return DeviceService.refresh_by_ip(ip)
+        DeviceService.refresh_by_ip(ip)

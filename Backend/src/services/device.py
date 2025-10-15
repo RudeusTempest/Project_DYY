@@ -54,12 +54,8 @@ class DeviceService:
         cred = CredentialsService.get_one_cred(ip)
         if not cred:
             return None
-        
-        connection = connect(cred)
-        hostname_output, ip_output, mac_output, last_updated, raw_date = get_outputs(connection)
-        hostname, interface_data, mac_address = extract(hostname_output, ip_output, mac_output)
 
-        return DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+        DeviceService.update_device_info(cred)
 
 
     @staticmethod
