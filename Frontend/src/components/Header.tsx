@@ -6,9 +6,11 @@ type HeaderProps = {
   onRefresh: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 };
 
-const Header = forwardRef<HTMLDivElement, HeaderProps>(({ loading, onRefresh, searchTerm, onSearchChange }, ref) => {
+const Header = forwardRef<HTMLDivElement, HeaderProps>(({ loading, onRefresh, searchTerm, onSearchChange, theme, onToggleTheme }, ref) => {
   return (
     <div className="app-header" ref={ref}>
       <div className="header-container">
@@ -25,6 +27,14 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(({ loading, onRefresh, se
               />
             </div>
           )}
+          <button
+            onClick={onToggleTheme}
+            className="theme-toggle"
+            aria-label="Toggle theme"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           <button
             onClick={onRefresh}
             className="refresh-button"
