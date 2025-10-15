@@ -115,7 +115,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const handleRefreshDevice = async (ip: string) => {
     try {
       setRefreshingIp(ip);
-      await fetch(`${API_BASE_URL}/refresh_one?ip=${encodeURIComponent(ip)}`, {
+      await fetch(`${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`, {
         method: 'POST',
       });
       // Re-fetch devices to reflect updated data
