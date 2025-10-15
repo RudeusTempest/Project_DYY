@@ -20,10 +20,29 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
   const [refreshingIp, setRefreshingIp] = useState<string | null>(null);
+  
+  // Theme (light/dark)
+  const getInitialTheme = (): 'light' | 'dark' => {
+    try {
+      const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch {}
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  };
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => getInitialTheme());
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
 
   
 
-  // Fetch data from backend API
+  // Fetch data from backend API or use mock data
   const fetchDevices = async () => {
     try {
       setLoading(true);
@@ -59,7 +78,7 @@ const NetworkDeviceMonitor: React.FC = () => {
     }
   };
 
-  // Load data from API on component mount
+  // Load data from API on component mount 
   useEffect(() => {
     fetchDevices();
   }, []);
@@ -115,6 +134,8 @@ const NetworkDeviceMonitor: React.FC = () => {
         onRefresh={handleRefresh}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <div className="app-layout">
