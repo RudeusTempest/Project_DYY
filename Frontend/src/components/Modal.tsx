@@ -8,24 +8,32 @@ type DeviceModalProps = {
 };
 
 const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }) => {
+  const getStatusStr = (p: any): string => {
+    const s = p?.status ?? p?.Status;
+    return typeof s === 'string' ? s : '';
+  };
+
+  const isActive = (s: string) => s.toLowerCase().replace(/\s+/g, '').includes('up/up');
+  const isUnauthorized = (s: string) => {
+    const n = s.toLowerCase().replace(/\s+/g, '');
+    return n.includes('not/authorized') || n.includes('notauthorized');
+  };
+
   return (
     <div className="port-status">
       <h4>Port Status</h4>
       <div className="ports-grid">
         {interfaces.map((port, index) => {
-          const status = typeof port?.status === 'string' ? port.status : '';
-          const isActive = status.includes('up/up');
-          const isUnauthorized = status.includes('not/authorized');
-
+          const s = getStatusStr(port);
           let portClass = 'port-inactive';
-          if (isActive) portClass = 'port-active';
-          if (isUnauthorized) portClass = 'port-unauthorized';
-
+          if (isActive(s)) portClass = 'port-active';
+          if (isUnauthorized(s)) portClass = 'port-unauthorized';
+          const name = (port as any)?.interface ?? (port as any)?.Interface ?? `Port ${index + 1}`;
           return (
             <div
               key={index}
               className={`port ${portClass}`}
-              title={`${port.interface}: ${port.status}`}
+              title={`${name}: ${s || 'unknown'}`}
             >
               {index + 1}
             </div>
@@ -88,22 +96,28 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
             <div className="detail-section">
               <h3>Interface Details</h3>
               <div className="interfaces">
-                {device.interface.map((port, index) => (
-                  <div key={index} className="interface-item">
-                    <div>
-                      <strong>{port.interface}:</strong>
+                {device.interface.map((port: any, index: number) => {
+                  const name = port?.interface ?? port?.Interface ?? `Port ${index + 1}`;
+                  const ip = port?.ip_address ?? port?.IP_Address ?? 'unassigned';
+                  const status = typeof (port?.status ?? port?.Status) === 'string' ? (port?.status ?? port?.Status) : 'unknown';
+                  const canCopy = ip !== 'unassigned' && ip !== 'This';
+                  return (
+                    <div key={index} className="interface-item">
+                      <div>
+                        <strong>{name}:</strong>
+                      </div>
+                      <div>
+                        IP: {ip}
+                        {canCopy && (
+                          <button onClick={() => copyToClipboard(ip)} className="copy-button">
+                            Copy
+                          </button>
+                        )}
+                      </div>
+                      <div>Status: {status}</div>
                     </div>
-                    <div>
-                      IP: {port.ip_address}
-                      {port.ip_address !== 'unassigned' && port.ip_address !== 'This' && (
-                        <button onClick={() => copyToClipboard(port.ip_address)} className="copy-button">
-                          Copy
-                        </button>
-                      )}
-                    </div>
-                    <div>Status: {typeof port?.status === 'string' ? port.status : 'unknown'}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
