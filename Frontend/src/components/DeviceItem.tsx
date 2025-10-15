@@ -6,9 +6,10 @@ type DeviceItemProps = {
   onClick: () => void;
   onRefresh: (ip: string) => void;
   isRefreshing?: boolean;
+  refreshIp?: string | null;
 };
 
-const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isRefreshing }) => {
+const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isRefreshing, refreshIp }) => {
   const rawPrimaryIP: any = Array.isArray(device.interface) ? device.interface?.[0]?.ip_address : undefined;
   const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
 
@@ -62,12 +63,13 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isR
             className="refresh-device-button"
             onClick={(e) => {
               e.stopPropagation();
-              if (primaryIP && primaryIP !== 'No IP' && primaryIP !== 'unassigned') {
-                onRefresh(primaryIP);
+              const ip = refreshIp ?? primaryIP;
+              if (ip && ip !== 'No IP' && ip !== 'unassigned' && ip !== 'This') {
+                onRefresh(ip);
               }
             }}
             title="Refresh this device"
-            disabled={!!isRefreshing}
+            disabled={!!isRefreshing || !((refreshIp ?? primaryIP) && (refreshIp ?? primaryIP) !== 'No IP' && (refreshIp ?? primaryIP) !== 'unassigned' && (refreshIp ?? primaryIP) !== 'This')}
           >
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>

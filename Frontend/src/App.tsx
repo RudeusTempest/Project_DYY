@@ -20,6 +20,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
   const [refreshingIp, setRefreshingIp] = useState<string | null>(null);
+  const [credentialIps, setCredentialIps] = useState<Set<string>>(new Set());
   
   // Theme (light/dark)
   const getInitialTheme = (): 'light' | 'dark' => {
@@ -78,9 +79,23 @@ const NetworkDeviceMonitor: React.FC = () => {
     }
   };
 
+  // Fetch connection credentials IPs
+  const fetchCredentialIps = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/credentials/connection_details`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const ips: string[] = Array.isArray(data?.details) ? data.details.map((c: any) => c?.ip).filter((v: any) => typeof v === 'string') : [];
+      setCredentialIps(new Set(ips));
+    } catch {
+      // ignore, keep empty set
+    }
+  };
+
   // Load data from API on component mount 
   useEffect(() => {
     fetchDevices();
+    fetchCredentialIps();
   }, []);
 
   // Removed dynamic header height update effect as unnecessary
@@ -167,6 +182,7 @@ const NetworkDeviceMonitor: React.FC = () => {
               onDeviceClick={handleDeviceClick}
               onRefreshDevice={handleRefreshDevice}
               refreshingIp={refreshingIp}
+              credentialIps={credentialIps}
             />
           )}
 
