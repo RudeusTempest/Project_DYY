@@ -13,7 +13,11 @@ const Sidebar: React.FC<SidebarProps> = ({ devices, usingMockData, loading }) =>
       acc.total++;
 
       const interfaces = Array.isArray(device.interface) ? device.interface : [];
-      const hasActivePort = interfaces.some(port => typeof port?.status === 'string' && port.status.includes('up/up'));
+      const hasActivePort = interfaces.some(port => {
+        const s = (port && (port.status ?? (port as any).Status)) as unknown;
+        const v = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '') : '';
+        return v.includes('up/up');
+      });
       if (device.hostname === "Hostname not found") {
         acc.unauthorized++;
       } else if (hasActivePort) {

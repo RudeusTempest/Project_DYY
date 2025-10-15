@@ -14,11 +14,17 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isR
   const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
 
   const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
-  const activeInterfaces = safeInterfaces.filter(port => typeof port?.status === 'string' && port.status.includes('up/up')).length;
+  const getStatusStr = (port: any) => {
+    const s = (port && (port.status ?? port.Status)) as unknown;
+    return typeof s === 'string' ? s : '';
+  };
+  const activeInterfaces = safeInterfaces.filter(port => getStatusStr(port).toLowerCase().replace(/\s+/g, '')
+    .includes('up/up')).length;
   const totalInterfaces = safeInterfaces.length;
 
   const getDeviceStatus = () => {
-    const hasActivePort = safeInterfaces.some(port => typeof port?.status === 'string' && port.status.includes('up/up'));
+    const hasActivePort = safeInterfaces.some(port => getStatusStr(port).toLowerCase().replace(/\s+/g, '')
+      .includes('up/up'));
     if (device.hostname === "Hostname not found") return 'Unauthorized';
     return hasActivePort ? 'Active' : 'Inactive';
   };
