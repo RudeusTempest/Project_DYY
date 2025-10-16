@@ -40,10 +40,10 @@ const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }
           const s = getStatusStr(port);
           const ip = getIp(port);
           let portClass = 'port-inactive';
-          if (isUnauthorized(s) || !hasAssignedIp(ip)) {
+          if (isActive(s)) {
+            portClass = hasAssignedIp(ip) ? 'port-active' : 'port-unauthorized';
+          } else if (isUnauthorized(s)) {
             portClass = 'port-unauthorized';
-          } else if (isActive(s)) {
-            portClass = 'port-active';
           }
           const name = (port as any)?.interface ?? (port as any)?.Interface ?? `Port ${index + 1}`;
           return (
