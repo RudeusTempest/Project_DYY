@@ -9,9 +9,21 @@ type DeviceItemProps = {
   refreshIp?: string | null;
 };
 
+const getMacAddress = (device: NetworkDevice): string => {
+  const rawMac = (device as any)?.Mac ?? (device as any)?.mac;
+  if (typeof rawMac === 'string') {
+    const trimmed = rawMac.trim();
+    if (trimmed.length > 0 && trimmed.toLowerCase() !== 'not found') {
+      return trimmed;
+    }
+  }
+  return 'Not found';
+};
+
 const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isRefreshing, refreshIp }) => {
   const rawPrimaryIP: any = Array.isArray(device.interface) ? device.interface?.[0]?.ip_address : undefined;
   const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
+  const macAddress = getMacAddress(device);
 
   const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
   const getStatusStr = (port: any) => {
@@ -45,7 +57,7 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isR
           <h3>{device.hostname}</h3>
           <div className="device-meta">
             <span className="ip-address">{primaryIP}</span>
-            <span className="mac-address">{device.Mac}</span>
+            <span className="mac-address">{macAddress}</span>
           </div>
         </div>
 
