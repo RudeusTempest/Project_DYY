@@ -687,15 +687,15 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 32px 32px 24px 32px;
-  border-bottom: 2px solid #f1f5f9;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-bottom: 2px solid var(--border);
+  background: linear-gradient(135deg, var(--surface), var(--card));
   border-radius: 20px 20px 0 0;
 }
 
 .modal-header h2 {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text);
   margin: 0;
 }
 
@@ -703,7 +703,7 @@ body {
   background: none;
   border: none;
   font-size: 28px;
-  color: #64748b;
+  color: var(--muted);
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 8px;
@@ -713,11 +713,32 @@ body {
 
 .close-button:hover {
   color: #ef4444;
-  background-color: #fef2f2;
+  background-color: rgba(239, 68, 68, 0.12);
 }
 
 .modal-body {
   padding: 32px;
+}
+
+.copy-feedback {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  transition: opacity 0.3s ease;
+}
+
+.copy-feedback.success {
+  border-color: rgba(34, 197, 94, 0.6);
+  background-color: rgba(34, 197, 94, 0.12);
+}
+
+.copy-feedback.error {
+  border-color: rgba(239, 68, 68, 0.6);
+  background-color: rgba(239, 68, 68, 0.12);
 }
 
 /* Device details */
@@ -732,8 +753,8 @@ body {
   font-weight: 700;
   font-size: 1.2rem;
   margin-bottom: 16px;
-  color: #1e293b;
-  border-bottom: 2px solid #e2e8f0;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
   padding-bottom: 8px;
 }
 
@@ -745,7 +766,7 @@ body {
 }
 
 .detail-item strong {
-  color: #374151;
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -760,32 +781,32 @@ body {
 }
 
 .interfaces::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--surface);
   border-radius: 3px;
 }
 
 .interfaces::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border);
   border-radius: 3px;
 }
 
 .interfaces::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--muted);
 }
 
 .interface-item {
   font-size: 0.9rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 12px;
-  background-color: #f8fafc;
+  background-color: var(--card);
   transition: all 0.2s ease;
 }
 
 .interface-item:hover {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
+  background-color: var(--surface);
+  border-color: var(--muted);
 }
 
 .interface-item:last-child {
