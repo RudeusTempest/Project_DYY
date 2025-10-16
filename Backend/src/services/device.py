@@ -56,6 +56,7 @@ class DeviceService:
             return None
 
         DeviceService.update_device_info(cred)
+        return DevicesRepo.get_one_record(ip)
 
 
     @staticmethod

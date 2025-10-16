@@ -46,4 +46,9 @@ class DevicesRepo:
     @staticmethod
     def get_all_records():
         return list(info_collection.find({}, {"_id": 0}))
+    
+
+    @staticmethod
+    def get_one_record(ip: str):
+        return list(info_collection.find({"ip": ip}, {"_id": 0}))
 
