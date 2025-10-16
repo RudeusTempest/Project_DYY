@@ -10,8 +10,8 @@ class DeviceController:
     
 
     @staticmethod
-    def get_one_record():
-        return DevicesRepo.get_one_record()
+    def get_one_record(ip: str):
+        return DevicesRepo.get_one_record(ip)
 
 
     @staticmethod

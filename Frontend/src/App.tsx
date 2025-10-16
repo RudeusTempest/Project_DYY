@@ -92,6 +92,24 @@ const NetworkDeviceMonitor: React.FC = () => {
     }
   };
 
+  const fetchDeviceRecord = async (ip: string): Promise<NetworkDevice | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/devices/get_one_record?ip=${encodeURIComponent(ip)}`);
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      const record = Array.isArray(data) ? data[0] : data;
+      if (!record) {
+        return null;
+      }
+      return record as NetworkDevice;
+    } catch (err) {
+      console.error('Error fetching device record:', err);
+      return null;
+    }
+  };
+
   // Load data from API on component mount 
   useEffect(() => {
     fetchDevices();
@@ -130,13 +148,47 @@ const NetworkDeviceMonitor: React.FC = () => {
   const handleRefreshDevice = async (ip: string) => {
     try {
       setRefreshingIp(ip);
-      await fetch(`${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`, {
+      const refreshResponse = await fetch(`${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`, {
         method: 'POST',
       });
-      // Re-fetch devices to reflect updated data
-      await fetchDevices();
+      if (!refreshResponse.ok) {
+        throw new Error(`HTTP error! status: ${refreshResponse.status}`);
+      }
+
+      const updatedDevice = await fetchDeviceRecord(ip);
+
+      if (!updatedDevice) {
+        await fetchDevices();
+      } else {
+        setDevices((prev) => {
+          const next = [...prev];
+          const index = next.findIndex((device) => {
+            const sameMac = device?.Mac && updatedDevice.Mac && device.Mac === updatedDevice.Mac;
+            const sameHostname = device?.hostname && updatedDevice.hostname && device.hostname === updatedDevice.hostname;
+            return sameMac || sameHostname;
+          });
+
+          if (index >= 0) {
+            next[index] = updatedDevice;
+          } else {
+            next.push(updatedDevice);
+          }
+
+          return next;
+        });
+
+        setUsingMockData(false);
+
+        setSelectedDevice((current) => {
+          if (!current) return current;
+          const sameMac = current.Mac && updatedDevice.Mac && current.Mac === updatedDevice.Mac;
+          const sameHostname = current.hostname && updatedDevice.hostname && current.hostname === updatedDevice.hostname;
+          return sameMac || sameHostname ? updatedDevice : current;
+        });
+      }
     } catch (err) {
       console.error('Error refreshing device:', err);
+      await fetchDevices();
     } finally {
       setRefreshingIp(null);
     }
