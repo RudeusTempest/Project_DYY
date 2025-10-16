@@ -7,10 +7,23 @@ type DeviceModalProps = {
   onClose: () => void;
 };
 
+type CopyFeedback = {
+  message: string;
+  tone: 'success' | 'error';
+};
+
 const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }) => {
   const getStatusStr = (p: any): string => {
     const s = p?.status ?? p?.Status;
     return typeof s === 'string' ? s : '';
+  };
+  const getIp = (p: any): string => {
+    const ip = p?.ip_address ?? p?.IP_Address ?? '';
+    return typeof ip === 'string' ? ip : String(ip ?? '');
+  };
+  const hasAssignedIp = (ip: string) => {
+    const normalized = ip.trim().toLowerCase();
+    return normalized && !['unassigned', 'this', ''].includes(normalized);
   };
 
   const isActive = (s: string) => s.toLowerCase().replace(/\s+/g, '').includes('up/up');
@@ -25,9 +38,13 @@ const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }
       <div className="ports-grid">
         {interfaces.map((port, index) => {
           const s = getStatusStr(port);
+          const ip = getIp(port);
           let portClass = 'port-inactive';
-          if (isActive(s)) portClass = 'port-active';
-          if (isUnauthorized(s)) portClass = 'port-unauthorized';
+          if (isUnauthorized(s) || !hasAssignedIp(ip)) {
+            portClass = 'port-unauthorized';
+          } else if (isActive(s)) {
+            portClass = 'port-active';
+          }
           const name = (port as any)?.interface ?? (port as any)?.Interface ?? `Port ${index + 1}`;
           return (
             <div
@@ -45,6 +62,27 @@ const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }
 };
 
 const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) => {
+  const [copyFeedback, setCopyFeedback] = React.useState<CopyFeedback | null>(null);
+  const feedbackTimeout = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (feedbackTimeout.current) {
+        window.clearTimeout(feedbackTimeout.current);
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen && feedbackTimeout.current) {
+      window.clearTimeout(feedbackTimeout.current);
+      feedbackTimeout.current = null;
+    }
+    if (!isOpen) {
+      setCopyFeedback(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen || !device) return null;
 
   const formatLastUpdated = (lastUpdated: string | { $date: string }) => {
@@ -54,14 +92,31 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
     return new Date(lastUpdated.$date).toLocaleString();
   };
 
+  const showCopyFeedback = (message: string, tone: 'success' | 'error') => {
+    if (feedbackTimeout.current) {
+      window.clearTimeout(feedbackTimeout.current);
+    }
+    setCopyFeedback({ message, tone });
+    feedbackTimeout.current = window.setTimeout(() => {
+      setCopyFeedback(null);
+      feedbackTimeout.current = null;
+    }, 3000);
+  };
+
   const copyToClipboard = (text: string) => {
-    navigator.clipboard
+    const clipboard = navigator?.clipboard;
+    if (!clipboard?.writeText) {
+      showCopyFeedback('Clipboard not supported in this browser', 'error');
+      return;
+    }
+
+    clipboard
       .writeText(text)
       .then(() => {
-        alert(`Copied: ${text}`);
+        showCopyFeedback('Copied to clipboard', 'success');
       })
       .catch(() => {
-        alert('Failed to copy to clipboard');
+        showCopyFeedback('Failed to copy to clipboard', 'error');
       });
   };
 
@@ -74,6 +129,11 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
         </div>
 
         <div className="modal-body">
+          {copyFeedback && (
+            <div className={`copy-feedback ${copyFeedback.tone}`}>
+              {copyFeedback.message}
+            </div>
+          )}
           <div className="device-details">
             <div className="detail-section">
               <h3>Device Information</h3>
