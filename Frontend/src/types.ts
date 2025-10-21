@@ -6,8 +6,8 @@ export interface NetworkInterface {
 
 export interface NetworkDevice {
   Mac: string;
+  mac?: string;
   hostname: string;
   interface: NetworkInterface[];
   "last updated at": string | { $date: string };
 }
-

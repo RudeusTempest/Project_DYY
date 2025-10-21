@@ -64,6 +64,16 @@ const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }
 const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) => {
   const [copyFeedback, setCopyFeedback] = React.useState<CopyFeedback | null>(null);
   const feedbackTimeout = React.useRef<number | null>(null);
+  const resolveMacAddress = React.useCallback((details: NetworkDevice): string => {
+    const raw = (details as any)?.Mac ?? (details as any)?.mac;
+    if (typeof raw === 'string') {
+      const cleaned = raw.trim();
+      if (cleaned.length > 0 && cleaned.toLowerCase() !== 'not found') {
+        return cleaned;
+      }
+    }
+    return 'Not found';
+  }, []);
 
   React.useEffect(() => {
     return () => {
@@ -84,6 +94,7 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
   }, [isOpen]);
 
   if (!isOpen || !device) return null;
+  const macAddress = resolveMacAddress(device);
 
   const formatLastUpdated = (lastUpdated: string | { $date: string }) => {
     if (typeof lastUpdated === 'string') {
@@ -141,9 +152,9 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
                 <strong>Hostname:</strong> {device.hostname}
               </div>
               <div className="detail-item">
-                <strong>MAC Address:</strong> {device.Mac}
-                {device.Mac !== 'Not found' && (
-                  <button onClick={() => copyToClipboard(device.Mac)} className="copy-button">
+                <strong>MAC Address:</strong> {macAddress}
+                {macAddress !== 'Not found' && (
+                  <button onClick={() => copyToClipboard(macAddress)} className="copy-button">
                     Copy
                   </button>
                 )}
