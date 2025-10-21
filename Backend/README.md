@@ -1,6 +1,6 @@
 # Network Device Monitor
-
 A full-stack application for monitoring network devices with a React frontend and FastAPI backend.
+
 
 ## Project Structure
 
@@ -21,7 +21,9 @@ Project_DYY/
     └── package.json
 ```
 
+
 ## Setup Instructions
+
 
 ### Backend Setup
 
@@ -32,15 +34,16 @@ Project_DYY/
 
 2. Install Python dependencies (if not already installed):
    ```bash
-   pip install fastapi uvicorn pymongo pydantic
+   pip install -r requirements.txt
    ```
 
 3. Start the FastAPI server:
    ```bash
-   python myfiles/D_FastAPI.py
+   uvicorn src.main:app --reload
    ```
 
    The backend will run on `http://localhost:8000`
+
 
 ### Frontend Setup
 
@@ -61,6 +64,7 @@ Project_DYY/
 
    The frontend will run on `http://localhost:3000`
 
+
 ## Features
 
 - **Real-time Data**: The frontend now fetches real data from the MongoDB database via the FastAPI backend
@@ -70,11 +74,13 @@ Project_DYY/
 - **Error Handling**: Proper error handling and loading states
 - **Refresh Capability**: Manual refresh button to update data
 
+
 ## API Endpoints
 
 - `GET /` - Returns all network devices from the database
 - `GET /connection_details` - Returns device connection details
 - `POST /add_device` - Adds a new device to the database
+
 
 ## Data Format
 
@@ -95,11 +101,13 @@ The application expects network device data in the following format:
 }
 ```
 
+
 ## Troubleshooting
 
 1. **CORS Issues**: The backend includes CORS middleware configured for React development servers
 2. **Database Connection**: Ensure MongoDB is running and accessible
 3. **Port Conflicts**: Make sure ports 8000 (backend) and 3000 (frontend) are available
+
 
 ## Recent Changes
 
