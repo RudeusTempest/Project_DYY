@@ -1,10 +1,15 @@
-from src.services.device import DeviceService
-from src.controllers.credentials import CredentialsController
-from src.services.connection import ConnectionService
+from src.controllers.devices import DeviceController
+import asyncio
 
 
-# DeviceService.update_device_info(CredentialsController.get_one_cred("192.170.0.74"))
-# DeviceService.update_device_info(CredentialsController.get_one_cred("192.170.0.75"))
-# DeviceService.update_device_info(CredentialsController.get_one_cred("192.170.0.77"))
-# DeviceService.update_device_info(CredentialsController.get_one_cred("192.170.0.78"))
+device_interval = 3600  # seconds
+mbps_interval = 60 # seconds
+
+
+async def main():
+    while True:
+        await asyncio.gather(DeviceController.periodic_refresh(device_interval, mbps_interval), DeviceController.update_mbps_loop(mbps_interval))
+
+
+asyncio.run(main())
 

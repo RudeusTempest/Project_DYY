@@ -4,7 +4,7 @@ import re
 class ExtractionService:
 
     @staticmethod 
-    def extract_cisco(device_type, hostname_output, ip_output, mac_output, info_neighbors_output):
+    def extract_cisco(device_type, mac_output, hostname_output, ip_output, info_neighbors_output):
 
         if device_type == "cisco_ios":
 
@@ -18,7 +18,7 @@ class ExtractionService:
             if hostname_match:
                 hostname = hostname_match.group(1)
             else: hostname = "Hostname not found"     
-
+            
             interface_data = []
             for line in ip_output.splitlines()[1:]:
                 # Example line: Ethernet0/0     192.170.0.74   YES manual up                    up
@@ -31,7 +31,10 @@ class ExtractionService:
                     interface_data.append({
                         "interface": interface_name,
                         "ip_address": ip,
-                        "status": f"{status}/{protocol}"
+                        "status": f"{status}/{protocol}",
+                        "max_speed": "pass",
+                        "mbps_received": "pass",
+                        "mbps_sent": "pass"
                     })
 
             info_neighbors = []
@@ -74,7 +77,10 @@ class ExtractionService:
                     interface_data.append({
                         "interface": interface_name,
                         "ip_address": ip,
-                        "status": f"{status}/{protocol}"
+                        "status": f"{status}/{protocol}",
+                        "max_speed": "Not measured",
+                        "mbps_received": "Not measured",
+                        "mbps_sent": "Not measured"
                     })
 
             info_neighbors = []

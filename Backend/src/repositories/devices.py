@@ -1,4 +1,5 @@
 from src.config.database import db
+from src.repositories.credentials import CredentialsRepo
 
 
 # Create collections
@@ -51,4 +52,22 @@ class DevicesRepo:
     @staticmethod
     def get_one_record(ip: str):
         return list(info_collection.find({"ip": ip}, {"_id": 0}))
+    
+
+    @staticmethod
+    def get_interface_data():
+        return list(info_collection.find({}, {"interface": 1, "_id": 0}))
+    
+
+    @staticmethod
+    def update_mbps(ip : str, mbps_received: float, mbps_sent: float):
+        # Save this back to MongoDB:
+        info_collection.update_one(
+            {"interface.ip_address": ip},
+            {"$set": {
+                "interface.$.mbps_received": mbps_received,
+                "interface.$.mbps_sent": mbps_sent
+            }}
+        )
+
 
