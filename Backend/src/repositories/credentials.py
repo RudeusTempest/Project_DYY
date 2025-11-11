@@ -14,7 +14,7 @@ class CredentialsRepo:
     @staticmethod
     def get_all_cred():
         connection_list = list(cred_collection.find({}, {"_id": 0}))
-        return {"details": connection_list}
+        return connection_list
     
 
     @staticmethod

@@ -1,7 +1,7 @@
 from netmiko import ConnectHandler 
 from datetime import datetime
 import re 
-from pysnmp.hlapi import SnmpEngine, CommunityData, UdpTransportTarget, ContextData, ObjectType, ObjectIdentity, getCmd
+
 
 
 class ConnectionService:
@@ -9,74 +9,85 @@ class ConnectionService:
     @staticmethod
     def connect(device_cred):
         try:
-            # Connecting to the router
+            # Connect to router/switch
             net_connect = ConnectHandler(**device_cred)
             return net_connect
-        except:
-            print("Connection failed")
+        except Exception as e:
+            print(f"Connection failed: {e}")
+            return None
+
+
 
 
     @staticmethod
     def get_cisco_outputs(net_connect, device_type):
 
         if device_type == "cisco_ios":
-            # Entering enable mode
+            # Enter enable mode
             # net_connect.enable()
 
-            # Getting commands outputs
+            # Get command outputs
             hostname_output = net_connect.send_command("show running-config | include hostname")
             ip_output = net_connect.send_command("show ip interface brief")
 
-            # Getting the first interface from the second line of the output
+            # Get the first interface from the second line of output
             interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[1:2].pop())
             if interface_output:
                 interface_0 = interface_output.group(1)
             else: interface_0 = "Not found"    
 
             mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
+            
+            # Get detailed output for ALL interfaces (for bandwidth extraction)
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            
             raw_date = datetime.now()
             last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
             info_neighbors_output = net_connect.send_command("show cdp neighbors")
-            # Close the connection
-            net_connect.disconnect()
+            # Close connection
+            # net_connect.disconnect()
 
-            return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
+            return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
     
 
         if device_type == "cisco_xr":
 
-            # Getting commands outputs
+            # Get command outputs
             hostname_output = net_connect.send_command("show running-config | include hostname")
             ip_output = net_connect.send_command("show ip interface brief")
 
-            # Getting the first interface from the second line of the output
+            # Get the first interface from the fourth line of output (XR differs from IOS)
             interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[4:5].pop())
             if interface_output:
                 interface_0 = interface_output.group(1)
             else: interface_0 = "Not found"    
 
             mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
+            
+            # Get detailed output for ALL interfaces (for bandwidth extraction)
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            
             raw_date = datetime.now()
             last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
             info_neighbors_output = net_connect.send_command("show cdp neighbors")
-            # Close the connection
-            net_connect.disconnect()
+            # Close connection
+            # net_connect.disconnect()
 
-            return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
+            return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
 
 
     @staticmethod
     def get_juniper_outputs(net_connect, device_type):
 
         if device_type == "juniper_junos":
-            # Entering cli mode
+            # Enter CLI mode
             net_connect.send_command("cli")
-            # Disabling pagination
+            # Disable pagination
             net_connect.send_command("set cli screen-length 0")
             
-            # Getting commands outputs
+            # Get command outputs
             hostname_output = net_connect.send_command("show configuration system host-name")
             ip_output = net_connect.send_command("show interfaces terse")
 
@@ -89,9 +100,15 @@ class ConnectionService:
             raw_date = datetime.now()
             last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
-            # Close the connection
+            # Close connection
             net_connect.disconnect()
 
             return hostname_output, ip_output, mac_output, last_updated, raw_date
-    
+        
+
+    @staticmethod
+    def get_cisco_outputs_mbps(net_connect, device_type):
+        if device_type in ["cisco_ios", "cisco_xr"]:
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            return all_interfaces_output
 
