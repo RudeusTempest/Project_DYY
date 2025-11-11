@@ -588,7 +588,7 @@ body {
   justify-content: flex-end;
 }
 
-.refresh-device-button {
+.update-device-button {
   margin-left: 12px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
@@ -602,13 +602,13 @@ body {
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.refresh-device-button:hover:not(:disabled) {
+.update-device-button:hover:not(:disabled) {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
 
-.refresh-device-button:disabled {
+.update-device-button:disabled {
   background: linear-gradient(135deg, #9ca3af, #6b7280);
   cursor: not-allowed;
   box-shadow: 0 1px 4px rgba(156, 163, 175, 0.25);

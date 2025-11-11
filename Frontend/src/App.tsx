@@ -5,7 +5,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DeviceList from './components/DeviceList';
 import DeviceModal from './components/Modal';
-import { NetworkDevice, NetworkInterface } from './types';
+import { NetworkDevice, NetworkInterface, NeighborDevice } from './types';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:8000';
@@ -14,6 +14,19 @@ const coerceString = (value: unknown, fallback = ''): string => {
   if (typeof value === 'string') return value;
   if (value == null) return fallback;
   return String(value);
+};
+
+const coerceNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
 };
 
 const normalizeInterfaces = (interfaces: unknown): NetworkInterface[] => {
@@ -32,12 +45,68 @@ const normalizeInterfaces = (interfaces: unknown): NetworkInterface[] => {
       (safe as any).status ?? (safe as any).Status,
       'unknown'
     );
-    return {
+    const normalized: NetworkInterface = {
       interface: name,
       ip_address: ip,
       status,
     };
+    const maxSpeed = coerceNumber(
+      (safe as any).max_speed ?? (safe as any).maxSpeed ?? (safe as any).speed
+    );
+    const mbpsReceived = coerceNumber(
+      (safe as any).mbps_received ?? (safe as any).mbpsReceived
+    );
+    const mbpsSent = coerceNumber(
+      (safe as any).mbps_sent ?? (safe as any).mbpsSent
+    );
+
+    if (maxSpeed !== null) {
+      normalized.max_speed = maxSpeed;
+    }
+    if (mbpsReceived !== null) {
+      normalized.mbps_received = mbpsReceived;
+    }
+    if (mbpsSent !== null) {
+      normalized.mbps_sent = mbpsSent;
+    }
+
+    return normalized;
   });
+};
+
+const normalizeNeighbors = (neighbors: unknown): NeighborDevice[] => {
+  if (!Array.isArray(neighbors)) return [];
+
+  return neighbors
+    .map((raw, idx) => {
+      const safe = raw ?? {};
+      const device_id = coerceString(
+        (safe as any).device_id ?? (safe as any).deviceId,
+        ''
+      );
+      const local_interface = coerceString(
+        (safe as any).local_interface ?? (safe as any).localInterface,
+        ''
+      );
+      const port_id = coerceString(
+        (safe as any).port_id ?? (safe as any).portId,
+        ''
+      );
+
+      if (!device_id && !local_interface && !port_id) {
+        return null;
+      }
+
+      const neighbor: NeighborDevice = {
+        device_id: device_id || `Neighbor ${idx + 1}`,
+        local_interface: local_interface || 'Unknown interface',
+      };
+      if (port_id) {
+        neighbor.port_id = port_id;
+      }
+      return neighbor;
+    })
+    .filter((neighbor): neighbor is NeighborDevice => Boolean(neighbor));
 };
 
 const normalizeDevice = (raw: unknown): NetworkDevice => {
@@ -63,13 +132,45 @@ const normalizeDevice = (raw: unknown): NetworkDevice => {
     lastUpdated = 'Unknown';
   }
 
-  return {
+  const rawDateSource =
+    source['raw date'] ??
+    (source as any).raw_date ??
+    (source as any).rawDate;
+
+  let rawDate: string | { $date: string } | undefined;
+  if (typeof rawDateSource === 'string') {
+    rawDate = rawDateSource;
+  } else if (
+    rawDateSource &&
+    typeof rawDateSource === 'object' &&
+    typeof (rawDateSource as any).$date === 'string'
+  ) {
+    rawDate = { $date: (rawDateSource as any).$date };
+  }
+
+  const neighbors = normalizeNeighbors(
+    (source as any).info_neighbors ??
+      (source as any).neighbors ??
+      (source as any).cdp_neighbors ??
+      (source as any).lldp_neighbors
+  );
+
+  const normalized: NetworkDevice = {
     Mac: mac,
     mac,
     hostname,
     interface: normalizeInterfaces(source.interface),
     'last updated at': lastUpdated,
   };
+
+  if (rawDate) {
+    normalized['raw date'] = rawDate;
+  }
+  if (neighbors.length) {
+    normalized.info_neighbors = neighbors;
+  }
+
+  return normalized;
 };
 
 const normalizeDeviceCollection = (input: unknown): NetworkDevice[] => {
@@ -86,7 +187,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingMockData, setUsingMockData] = useState(false);
-  const [refreshingIp, setRefreshingIp] = useState<string | null>(null);
+  const [updatingIp, setUpdatingIp] = useState<string | null>(null);
   const [credentialIps, setCredentialIps] = useState<Set<string>>(new Set());
   
   // Theme (light/dark)
@@ -222,33 +323,33 @@ const NetworkDeviceMonitor: React.FC = () => {
     fetchDevices();
   };
 
-  // Refresh a single device by IP
-  const handleRefreshDevice = async (ip: string) => {
+  // Update a single device by IP
+  const handleUpdateDevice = async (ip: string) => {
     try {
-      setRefreshingIp(ip);
-      const refreshUrl = `${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`;
-      console.log(`[API] POST /devices/refresh_one - refreshing device ip=${ip}`);
-      const refreshResponse = await fetch(refreshUrl, {
+      setUpdatingIp(ip);
+      const updateUrl = `${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`;
+      console.log(`[API] POST /devices/refresh_one - updating device ip=${ip}`);
+      const updateResponse = await fetch(updateUrl, {
         method: 'POST',
       });
-      if (!refreshResponse.ok) {
-        console.warn(`[API] POST /devices/refresh_one - request failed with status ${refreshResponse.status} for ip=${ip}`);
-        throw new Error(`HTTP error! status: ${refreshResponse.status}`);
+      if (!updateResponse.ok) {
+        console.warn(`[API] POST /devices/refresh_one - request failed with status ${updateResponse.status} for ip=${ip}`);
+        throw new Error(`HTTP error! status: ${updateResponse.status}`);
       }
 
-      let refreshPayload: unknown = null;
+      let updatePayload: unknown = null;
       try {
-        refreshPayload = await refreshResponse.clone().json();
-        console.log(`[API] POST /devices/refresh_one - response payload for ip=${ip}:`, refreshPayload);
+        updatePayload = await updateResponse.clone().json();
+        console.log(`[API] POST /devices/refresh_one - response payload for ip=${ip}:`, updatePayload);
       } catch {
         console.log(`[API] POST /devices/refresh_one - no JSON response for ip=${ip}`);
       }
 
-      console.log(`[API] POST /devices/refresh_one - refresh triggered for ip=${ip}, fetching latest record`);
+      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${ip}, fetching latest record`);
       const updatedDevice = await fetchDeviceRecord(ip);
 
       if (!updatedDevice) {
-        console.log(`[API] GET /devices/get_one_record - falling back to full fetch after refresh for ip=${ip}`);
+        console.log(`[API] GET /devices/get_one_record - falling back to full fetch after update for ip=${ip}`);
         await fetchDevices();
       } else {
         setDevices((prev) => {
@@ -278,11 +379,11 @@ const NetworkDeviceMonitor: React.FC = () => {
         });
       }
     } catch (err) {
-      console.error('Error refreshing device:', err);
-      console.log('[API] GET /devices/get_all - refetching after refresh failure');
+      console.error('Error updating device:', err);
+      console.log('[API] GET /devices/get_all - refetching after update failure');
       await fetchDevices();
     } finally {
-      setRefreshingIp(null);
+      setUpdatingIp(null);
     }
   };
 
@@ -324,8 +425,8 @@ const NetworkDeviceMonitor: React.FC = () => {
             <DeviceList
               devices={filteredDevices}
               onDeviceClick={handleDeviceClick}
-              onRefreshDevice={handleRefreshDevice}
-              refreshingIp={refreshingIp}
+              onUpdateDevice={handleUpdateDevice}
+              updatingIp={updatingIp}
               credentialIps={credentialIps}
             />
           )}

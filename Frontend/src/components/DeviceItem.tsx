@@ -4,9 +4,9 @@ import { NetworkDevice } from '../types';
 type DeviceItemProps = {
   device: NetworkDevice;
   onClick: () => void;
-  onRefresh: (ip: string) => void;
-  isRefreshing?: boolean;
-  refreshIp?: string | null;
+  onUpdate: (ip: string) => void;
+  isUpdating?: boolean;
+  updateIp?: string | null;
 };
 
 const getMacAddress = (device: NetworkDevice): string => {
@@ -20,7 +20,7 @@ const getMacAddress = (device: NetworkDevice): string => {
   return 'Not found';
 };
 
-const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isRefreshing, refreshIp }) => {
+const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onUpdate, isUpdating, updateIp }) => {
   const rawPrimaryIP: any = Array.isArray(device.interface) ? device.interface?.[0]?.ip_address : undefined;
   const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
   const macAddress = getMacAddress(device);
@@ -78,18 +78,16 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onRefresh, isR
             {status}
           </div>
           <button
-            className="refresh-device-button"
+            className="update-device-button"
             onClick={(e) => {
               e.stopPropagation();
-              const ip = refreshIp ?? primaryIP;
-              if (ip && ip !== 'No IP' && ip !== 'unassigned' && ip !== 'This') {
-                onRefresh(ip);
-              }
+              const ip = updateIp ?? primaryIP;
+              onUpdate(ip);
             }}
-            title="Refresh this device"
-            disabled={!!isRefreshing || !((refreshIp ?? primaryIP) && (refreshIp ?? primaryIP) !== 'No IP' && (refreshIp ?? primaryIP) !== 'unassigned' && (refreshIp ?? primaryIP) !== 'This')}
+            title="Update this device"
+            disabled={!!isUpdating}
           >
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            {isUpdating ? 'Updating...' : 'Update'}
           </button>
         </div>
       </div>

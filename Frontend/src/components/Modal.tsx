@@ -1,5 +1,5 @@
 import React from 'react';
-import { NetworkDevice, NetworkInterface } from '../types';
+import { NetworkDevice, NetworkInterface, NeighborDevice } from '../types';
 
 type DeviceModalProps = {
   device: NetworkDevice | null;
@@ -10,6 +10,20 @@ type DeviceModalProps = {
 type CopyFeedback = {
   message: string;
   tone: 'success' | 'error';
+};
+
+const formatSpeed = (value?: number): string => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `${value} Mbps`;
+  }
+  return 'Unknown';
+};
+
+const formatMbpsValue = (value?: number): string => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(3);
+  }
+  return '0.000';
 };
 
 const PortStatus: React.FC<{ interfaces: NetworkInterface[] }> = ({ interfaces }) => {
@@ -162,6 +176,11 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
               <div className="detail-item">
                 <strong>Last Updated:</strong> {formatLastUpdated(device['last updated at'])}
               </div>
+              {device['raw date'] && (
+                <div className="detail-item">
+                  <strong>Raw Date:</strong> {formatLastUpdated(device['raw date'] as any)}
+                </div>
+              )}
             </div>
 
             <div className="detail-section">
@@ -171,6 +190,9 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
                   const name = port?.interface ?? port?.Interface ?? `Port ${index + 1}`;
                   const ip = port?.ip_address ?? port?.IP_Address ?? 'unassigned';
                   const status = typeof (port?.status ?? port?.Status) === 'string' ? (port?.status ?? port?.Status) : 'unknown';
+                  const maxSpeed = port?.max_speed;
+                  const mbpsReceived = port?.mbps_received;
+                  const mbpsSent = port?.mbps_sent;
                   const canCopy = ip !== 'unassigned' && ip !== 'This';
                   return (
                     <div key={index} className="interface-item">
@@ -186,11 +208,37 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, isOpen, onClose }) =>
                         )}
                       </div>
                       <div>Status: {status}</div>
+                      <div>Max Speed: {formatSpeed(maxSpeed)}</div>
+                      <div>
+                        Traffic (Mbps): RX {formatMbpsValue(mbpsReceived)} / TX {formatMbpsValue(mbpsSent)}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
+            {Array.isArray(device.info_neighbors) && device.info_neighbors.length > 0 && (
+              <div className="detail-section">
+                <h3>Neighbor Details</h3>
+                <div className="neighbors">
+                  {device.info_neighbors.map((neighbor: NeighborDevice, index: number) => (
+                    <div key={index} className="neighbor-item">
+                      <div>
+                        <strong>Device ID:</strong> {neighbor.device_id}
+                      </div>
+                      <div>
+                        <strong>Local Interface:</strong> {neighbor.local_interface}
+                      </div>
+                      {neighbor.port_id && (
+                        <div>
+                          <strong>Port ID:</strong> {neighbor.port_id}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <PortStatus interfaces={device.interface} />

@@ -5,12 +5,12 @@ import DeviceItem from './DeviceItem';
 type DeviceListProps = {
   devices: NetworkDevice[];
   onDeviceClick: (device: NetworkDevice) => void;
-  onRefreshDevice: (ip: string) => void;
-  refreshingIp?: string | null;
+  onUpdateDevice: (ip: string) => void;
+  updatingIp?: string | null;
   credentialIps?: Set<string>;
 };
 
-const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick, onRefreshDevice, refreshingIp, credentialIps }) => {
+const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick, onUpdateDevice, updatingIp, credentialIps }) => {
   return (
     <div className="devices-list">
       {devices.map((device, index) => (
@@ -18,18 +18,18 @@ const DeviceList: React.FC<DeviceListProps> = ({ devices, onDeviceClick, onRefre
           const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
           const candidateIps = safeInterfaces
             .map(p => (typeof p?.ip_address === 'string' ? p.ip_address : null))
-            .filter((ip): ip is string => !!ip && ip !== 'unassigned' && ip !== 'This');
-          const refreshIp = credentialIps && candidateIps.find(ip => credentialIps.has(ip));
+            .filter((ip): ip is string => typeof ip === 'string' && ip.trim().length > 0);
+          const preferredIp = credentialIps && candidateIps.find(ip => credentialIps.has(ip));
           const primary = candidateIps[0];
-          const effectiveIp = refreshIp ?? primary;
+          const effectiveIp = preferredIp ?? primary;
           return (
             <DeviceItem
           key={index}
           device={device}
           onClick={() => onDeviceClick(device)}
-          onRefresh={onRefreshDevice}
-          isRefreshing={effectiveIp === refreshingIp}
-          refreshIp={refreshIp}
+          onUpdate={onUpdateDevice}
+          isUpdating={effectiveIp === updatingIp}
+          updateIp={preferredIp}
         />
           );
         })()
