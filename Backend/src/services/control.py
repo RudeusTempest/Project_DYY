@@ -3,7 +3,7 @@ import asyncio
 
 
 device_interval = 3600  # seconds
-mbps_interval = 60 # seconds
+mbps_interval = 0 # seconds
 
 
 async def main():

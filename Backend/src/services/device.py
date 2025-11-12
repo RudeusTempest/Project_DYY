@@ -117,7 +117,10 @@ class DeviceService:
             for interface_data in interfaces_data_list:
                 # Match IP with credentials to get SNMP password
                 for ip_and_snmp_dict in ip_and_snmp_list:
+                    if ip_and_snmp_dict.get("snmp_password") is None:
+                        continue
                     if interface_data["ip_address"] == ip_and_snmp_dict["ip"]:
+                        # Get interface index via SNMP
                         interface_indexes = await ConnectionService.get_interfaces_indexes(ip_and_snmp_dict["ip"], ip_and_snmp_dict["snmp_password"])
                         if interface_indexes is None:
                             print(f"Skipping Mbps update for {interface_data['ip_address']} due to missing SNMP password")
