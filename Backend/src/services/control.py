@@ -11,5 +11,6 @@ async def main():
         await asyncio.gather(DeviceController.periodic_refresh(device_interval, mbps_interval), DeviceController.update_mbps_loop(mbps_interval))
 
 
-asyncio.run(main())
+# asyncio.run(main())
 
+# asyncio.run(DeviceController.refresh_by_ip("192.170.0.78"))

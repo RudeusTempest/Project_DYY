@@ -17,4 +17,4 @@ async def get_one_record(ip: str):
 
 @router.post("/refresh_one")
 async def refresh_by_ip(ip: str):
-    return DeviceController.refresh_by_ip(ip)
+    await DeviceController.refresh_by_ip(ip)

@@ -42,6 +42,7 @@ class DeviceService:
                 print(f"interface {interface_dict['interface']}: done")
             # Saves details in database
             DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+            print("Saved to DB")
 
 
         elif "juniper" in cred["device_type"]:
@@ -85,14 +86,12 @@ class DeviceService:
 
 
     @staticmethod
-    def refresh_by_ip(ip: str):
-        from src.services.credentials import CredentialsService
+    async def refresh_by_ip(ip: str):
         cred = CredentialsService.get_one_cred(ip)
         if not cred:
             return None
 
-        DeviceService.update_device_info(cred)
-        return DevicesRepo.get_one_record(ip)
+        await DeviceService.update_device_info(cred)
 
 
     @staticmethod
