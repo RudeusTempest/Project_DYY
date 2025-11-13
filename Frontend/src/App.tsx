@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
-import { mockData } from './data';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DeviceList from './components/DeviceList';
@@ -178,6 +177,45 @@ const normalizeDeviceCollection = (input: unknown): NetworkDevice[] => {
   return input.map(normalizeDevice);
 };
 
+const requestDevices = async (): Promise<NetworkDevice[]> => {
+  console.log('[API] GET /devices/get_all - fetching latest devices');
+  const response = await fetch(`${API_BASE_URL}/devices/get_all`);
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log('[API] GET /devices/get_all - raw payload:', data);
+
+  const devicesData = normalizeDeviceCollection(data);
+  console.log(`[API] GET /devices/get_all - received ${devicesData.length} records`);
+  return devicesData;
+};
+
+const findDeviceByIdentifier = (collection: NetworkDevice[], identifier: string): NetworkDevice | null => {
+  const target = typeof identifier === 'string' ? identifier.trim().toLowerCase() : '';
+  if (!target) {
+    return null;
+  }
+
+  const matches = (value: unknown) => {
+    if (typeof value !== 'string') return false;
+    return value.trim().toLowerCase() === target;
+  };
+
+  return (
+    collection.find((device) => {
+      const macMatch = matches(device?.Mac) || matches((device as any)?.mac);
+      const hostnameMatch = matches(device?.hostname);
+      const interfaceMatch = Array.isArray(device?.interface)
+        ? device.interface.some((port: any) => matches(port?.ip_address))
+        : false;
+      return macMatch || hostnameMatch || interfaceMatch;
+    }) ?? null
+  );
+};
+
 // Main App Component
 const NetworkDeviceMonitor: React.FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
@@ -186,7 +224,6 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usingMockData, setUsingMockData] = useState(false);
   const [updatingIp, setUpdatingIp] = useState<string | null>(null);
   const [credentialIps, setCredentialIps] = useState<Set<string>>(new Set());
   
@@ -212,88 +249,64 @@ const NetworkDeviceMonitor: React.FC = () => {
   
 
   // Fetch data from backend API or use mock data
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async (): Promise<NetworkDevice[] | null> => {
     try {
       setLoading(true);
       setError(null);
-      setUsingMockData(false);
-
-      console.log('[API] GET /devices/get_all - fetching latest devices');
-      const response = await fetch(`${API_BASE_URL}/devices/get_all`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('[API] GET /devices/get_all - raw payload:', data);
-
-      const devicesData = normalizeDeviceCollection(data);
-
-      console.log(`[API] GET /devices/get_all - received ${devicesData.length} records`);
+      const devicesData = await requestDevices();
       if (devicesData.length === 0) {
-        console.log('No devices found in database, using mock data');
-        setDevices(normalizeDeviceCollection(mockData));
-        setUsingMockData(true);
+        console.log('No devices found in database');
+        setDevices([]);
       } else {
         setDevices(devicesData);
-        setUsingMockData(false);
       }
+      return devicesData;
     } catch (err) {
       console.error('Error fetching devices:', err);
-      console.log('API request failed, using mock data');
-      setDevices(normalizeDeviceCollection(mockData));
-      setUsingMockData(true);
-      setError(null);
+      setDevices([]);
+      setError('Unable to load devices from API.');
+      return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Fetch connection credentials IPs
-  const fetchCredentialIps = async () => {
+  const fetchCredentialIps = useCallback(async () => {
     try {
       console.log('[API] GET /credentials/connection_details - fetching credential IPs');
       const res = await fetch(`${API_BASE_URL}/credentials/connection_details`);
       if (!res.ok) return;
       const data = await res.json();
       console.log('[API] GET /credentials/connection_details - raw payload:', data);
-      const ips: string[] = Array.isArray(data?.details) ? data.details.map((c: any) => c?.ip).filter((v: any) => typeof v === 'string') : [];
+
+      const toIpList = (payload: unknown): string[] => {
+        if (Array.isArray(payload)) {
+          return payload
+            .map((cred: any) => (typeof cred?.ip === 'string' ? cred.ip.trim() : ''))
+            .filter((ip): ip is string => Boolean(ip));
+        }
+        if (Array.isArray((payload as any)?.details)) {
+          return (payload as any).details
+            .map((cred: any) => (typeof cred?.ip === 'string' ? cred.ip.trim() : ''))
+            .filter((ip: string) => Boolean(ip));
+        }
+        return [];
+      };
+
+      const ips = toIpList(data);
       console.log(`[API] GET /credentials/connection_details - received ${ips.length} credential IP(s)`);
       setCredentialIps(new Set(ips));
     } catch {
       // ignore, keep empty set
     }
-  };
-
-  const fetchDeviceRecord = async (ip: string): Promise<NetworkDevice | null> => {
-    try {
-      console.log(`[API] GET /devices/get_one_record - fetching device record for ip=${ip}`);
-      const response = await fetch(`${API_BASE_URL}/devices/get_one_record?ip=${encodeURIComponent(ip)}`);
-      if (!response.ok) {
-        console.warn(`[API] GET /devices/get_one_record - request failed with status ${response.status} for ip=${ip}`);
-        return null;
-      }
-      const data = await response.json();
-      console.log(`[API] GET /devices/get_one_record - raw payload for ip=${ip}:`, data);
-      const record = Array.isArray(data) ? data[0] : data;
-      if (!record) {
-        console.warn(`[API] GET /devices/get_one_record - no record returned for ip=${ip}`);
-        return null;
-      }
-      console.log(`[API] GET /devices/get_one_record - received record for ip=${ip}`);
-      return normalizeDevice(record);
-    } catch (err) {
-      console.error('Error fetching device record:', err);
-      return null;
-    }
-  };
+  }, []);
 
   // Load data from API on component mount 
   useEffect(() => {
     fetchDevices();
     fetchCredentialIps();
-  }, []);
+  }, [fetchDevices, fetchCredentialIps]);
 
   // Removed dynamic header height update effect as unnecessary
 
@@ -309,14 +322,24 @@ const NetworkDeviceMonitor: React.FC = () => {
 
   // Filter devices based on search term
   const toLower = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v)).toLowerCase();
-  const filteredDevices = devices.filter((device: any) => {
+  const filteredDevices = useMemo(() => {
     const term = toLower(searchTerm);
-    const hostname = toLower(device?.hostname);
-    const interfaces = Array.isArray(device?.interface) ? device.interface : [];
-    const hostMatch = hostname.includes(term);
-    const ipMatch = interfaces.some((port: any) => toLower(port?.ip_address).includes(term));
-    return hostMatch || ipMatch;
-  });
+    if (term.length === 0) {
+      return devices;
+    }
+    return devices.filter((device: any) => {
+      const hostname = toLower(device?.hostname);
+      const interfaces = Array.isArray(device?.interface) ? device.interface : [];
+      const hostMatch = hostname.includes(term);
+      const ipMatch = interfaces.some((port: any) => toLower(port?.ip_address).includes(term));
+      return hostMatch || ipMatch;
+    });
+  }, [devices, searchTerm]);
+
+  const hasDevices = devices.length > 0;
+  const showDeviceList = !loading && !error && hasDevices;
+  const showEmptyState = !loading && !error && !hasDevices;
+  const showSearchNoResults = !loading && !error && hasDevices && filteredDevices.length === 0;
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -325,59 +348,51 @@ const NetworkDeviceMonitor: React.FC = () => {
 
   // Update a single device by IP
   const handleUpdateDevice = async (ip: string) => {
+    const sanitizedIp = typeof ip === 'string' ? ip.trim() : '';
+    if (!sanitizedIp || sanitizedIp.toLowerCase() === 'no ip') {
+      console.warn('[API] POST /devices/refresh_one - skipping update, no valid IP provided');
+      return;
+    }
+
     try {
-      setUpdatingIp(ip);
-      const updateUrl = `${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(ip)}`;
-      console.log(`[API] POST /devices/refresh_one - updating device ip=${ip}`);
+      setUpdatingIp(sanitizedIp);
+      const updateUrl = `${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(sanitizedIp)}`;
+      console.log(`[API] POST /devices/refresh_one - updating device ip=${sanitizedIp}`);
       const updateResponse = await fetch(updateUrl, {
         method: 'POST',
       });
       if (!updateResponse.ok) {
-        console.warn(`[API] POST /devices/refresh_one - request failed with status ${updateResponse.status} for ip=${ip}`);
+        console.warn(
+          `[API] POST /devices/refresh_one - request failed with status ${updateResponse.status} for ip=${sanitizedIp}`
+        );
         throw new Error(`HTTP error! status: ${updateResponse.status}`);
       }
 
       let updatePayload: unknown = null;
       try {
         updatePayload = await updateResponse.clone().json();
-        console.log(`[API] POST /devices/refresh_one - response payload for ip=${ip}:`, updatePayload);
+        console.log(`[API] POST /devices/refresh_one - response payload for ip=${sanitizedIp}:`, updatePayload);
       } catch {
-        console.log(`[API] POST /devices/refresh_one - no JSON response for ip=${ip}`);
+        console.log(`[API] POST /devices/refresh_one - no JSON response for ip=${sanitizedIp}`);
       }
 
-      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${ip}, fetching latest record`);
-      const updatedDevice = await fetchDeviceRecord(ip);
+      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${sanitizedIp}, refreshing device list`);
+      const latestDevices = await requestDevices();
+      setDevices(latestDevices);
+      setError(null);
 
+      const updatedDevice = findDeviceByIdentifier(latestDevices, sanitizedIp);
       if (!updatedDevice) {
-        console.log(`[API] GET /devices/get_one_record - falling back to full fetch after update for ip=${ip}`);
-        await fetchDevices();
-      } else {
-        setDevices((prev) => {
-          const next = [...prev];
-          const index = next.findIndex((device) => {
-            const sameMac = device?.Mac && updatedDevice.Mac && device.Mac === updatedDevice.Mac;
-            const sameHostname = device?.hostname && updatedDevice.hostname && device.hostname === updatedDevice.hostname;
-            return sameMac || sameHostname;
-          });
-
-          if (index >= 0) {
-            next[index] = updatedDevice;
-          } else {
-            next.push(updatedDevice);
-          }
-
-          return next;
-        });
-
-        setUsingMockData(false);
-
-        setSelectedDevice((current) => {
-          if (!current) return current;
-          const sameMac = current.Mac && updatedDevice.Mac && current.Mac === updatedDevice.Mac;
-          const sameHostname = current.hostname && updatedDevice.hostname && current.hostname === updatedDevice.hostname;
-          return sameMac || sameHostname ? updatedDevice : current;
-        });
+        console.warn(`[API] Device not found after refresh for identifier "${sanitizedIp}"`);
+        return;
       }
+
+      setSelectedDevice((current) => {
+        if (!current) return current;
+        const sameMac = current.Mac && updatedDevice.Mac && current.Mac === updatedDevice.Mac;
+        const sameHostname = current.hostname && updatedDevice.hostname && current.hostname === updatedDevice.hostname;
+        return sameMac || sameHostname ? updatedDevice : current;
+      });
     } catch (err) {
       console.error('Error updating device:', err);
       console.log('[API] GET /devices/get_all - refetching after update failure');
@@ -402,16 +417,16 @@ const NetworkDeviceMonitor: React.FC = () => {
         {!error && (
           <Sidebar
             devices={filteredDevices}
-            usingMockData={usingMockData}
             loading={loading}
           />
         )}
 
         <div className="main-content">
           {error && (
-            <div className="error-message">
-              <p>Error: {error}</p>
-              <button onClick={fetchDevices} className="retry-button">Retry</button>
+            <div className="status-panel api-error">
+              <h3>API unavailable</h3>
+              <p>{error}</p>
+              <button onClick={fetchDevices} className="retry-button">Try again</button>
             </div>
           )}
 
@@ -421,7 +436,15 @@ const NetworkDeviceMonitor: React.FC = () => {
             </div>
           )}
 
-          {!loading && !error && (
+          {showEmptyState && (
+            <div className="status-panel empty-state">
+              <h3>No devices found</h3>
+              <p>We couldn’t load any devices from the API. Try refreshing to fetch the latest inventory.</p>
+              <button onClick={fetchDevices} className="secondary-action-button">Refresh</button>
+            </div>
+          )}
+
+          {showDeviceList && (
             <DeviceList
               devices={filteredDevices}
               onDeviceClick={handleDeviceClick}
@@ -431,7 +454,7 @@ const NetworkDeviceMonitor: React.FC = () => {
             />
           )}
 
-          {!loading && !error && filteredDevices.length === 0 && devices.length > 0 && (
+          {showSearchNoResults && (
             <div className="no-results">
               <p>No devices found matching your search.</p>
             </div>

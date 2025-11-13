@@ -1,46 +1,41 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NetworkDevice } from '../types';
 
 type SidebarProps = {
   devices: NetworkDevice[];
-  usingMockData: boolean;
   loading: boolean;
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ devices, usingMockData, loading }) => {
-  const stats = devices.reduce(
-    (acc, device) => {
-      acc.total++;
+const Sidebar: React.FC<SidebarProps> = ({ devices, loading }) => {
+  const stats = useMemo(() => {
+    return devices.reduce(
+      (acc, device) => {
+        acc.total++;
 
-      const interfaces = Array.isArray(device.interface) ? device.interface : [];
-      const hasActivePort = interfaces.some(port => {
-        const s = (port && (port.status ?? (port as any).Status)) as unknown;
-        const v = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '') : '';
-        return v.includes('up/up');
-      });
-      if (device.hostname === "Hostname not found") {
-        acc.unauthorized++;
-      } else if (hasActivePort) {
-        acc.active++;
-      } else {
-        acc.inactive++;
-      }
+        const interfaces = Array.isArray(device.interface) ? device.interface : [];
+        const hasActivePort = interfaces.some(port => {
+          const s = (port && (port.status ?? (port as any).Status)) as unknown;
+          const v = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '') : '';
+          return v.includes('up/up');
+        });
+        if (device.hostname === "Hostname not found") {
+          acc.unauthorized++;
+        } else if (hasActivePort) {
+          acc.active++;
+        } else {
+          acc.inactive++;
+        }
 
-      return acc;
-    },
-    { total: 0, active: 0, inactive: 0, unauthorized: 0 }
-  );
+        return acc;
+      },
+      { total: 0, active: 0, inactive: 0, unauthorized: 0 }
+    );
+  }, [devices]);
 
   return (
     <div className="sidebar">
       <div className="sidebar-content">
         <h3>Device Monitor</h3>
-
-        {usingMockData && !loading && (
-          <div className="sidebar-mock-banner">
-            <p>Using mock data - API unavailable</p>
-          </div>
-        )}
 
         {/* Search moved to header */}
 
