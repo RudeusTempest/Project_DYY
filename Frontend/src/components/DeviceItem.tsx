@@ -1,5 +1,5 @@
-import React from 'react';
-import { NetworkDevice } from '../types';
+import React, { useMemo } from 'react';
+import { NetworkDevice, NetworkInterface } from '../types';
 
 type DeviceItemProps = {
   device: NetworkDevice;
@@ -21,27 +21,56 @@ const getMacAddress = (device: NetworkDevice): string => {
 };
 
 const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onUpdate, isUpdating, updateIp }) => {
-  const rawPrimaryIP: any = Array.isArray(device.interface) ? device.interface?.[0]?.ip_address : undefined;
-  const primaryIP = typeof rawPrimaryIP === 'string' ? rawPrimaryIP : (rawPrimaryIP != null ? String(rawPrimaryIP) : 'No IP');
   const macAddress = getMacAddress(device);
 
-  const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
-  const getStatusStr = (port: any) => {
-    const s = (port && (port.status ?? port.Status)) as unknown;
-    return typeof s === 'string' ? s : '';
-  };
-  const activeInterfaces = safeInterfaces.filter(port => getStatusStr(port).toLowerCase().replace(/\s+/g, '')
-    .includes('up/up')).length;
-  const totalInterfaces = safeInterfaces.length;
+  const interfaceSnapshot = useMemo(() => {
+    const safeInterfaces: NetworkInterface[] = Array.isArray(device.interface) ? device.interface : [];
+    let activeInterfaces = 0;
+    const candidateIps: string[] = [];
 
-  const getDeviceStatus = () => {
-    const hasActivePort = safeInterfaces.some(port => getStatusStr(port).toLowerCase().replace(/\s+/g, '')
-      .includes('up/up'));
-    if (device.hostname === "Hostname not found") return 'Unauthorized';
-    return hasActivePort ? 'Active' : 'Inactive';
-  };
+    safeInterfaces.forEach((port) => {
+      const statusValue = typeof (port?.status ?? (port as any)?.Status) === 'string' ? (port?.status ?? (port as any)?.Status) : '';
+      const normalizedStatus = statusValue.toLowerCase().replace(/\s+/g, '');
+      if (normalizedStatus.includes('up/up')) {
+        activeInterfaces++;
+      }
+      const ipValue = port?.ip_address ?? (port as any)?.IP_Address ?? (port as any)?.ip;
+      if (ipValue == null) return;
+      const ipString = typeof ipValue === 'string' ? ipValue : String(ipValue);
+      const trimmed = ipString.trim();
+      if (trimmed.length > 0) {
+        candidateIps.push(trimmed);
+      }
+    });
 
-  const status = getDeviceStatus();
+    let primaryIp = candidateIps[0];
+    if (!primaryIp) {
+      const fallbackValue = safeInterfaces[0]?.ip_address ?? (safeInterfaces[0] as any)?.IP_Address;
+      if (typeof fallbackValue === 'string') {
+        primaryIp = fallbackValue;
+      } else if (fallbackValue != null) {
+        primaryIp = String(fallbackValue);
+      }
+    }
+    if (!primaryIp) {
+      primaryIp = 'No IP';
+    }
+
+    const status =
+      device.hostname === 'Hostname not found'
+        ? 'Unauthorized'
+        : activeInterfaces > 0
+        ? 'Active'
+        : 'Inactive';
+
+    return {
+      totalInterfaces: safeInterfaces.length,
+      activeInterfaces,
+      primaryIp,
+      status,
+    };
+  }, [device.hostname, device.interface]);
+  const { totalInterfaces, activeInterfaces, primaryIp, status } = interfaceSnapshot;
 
   const formatLastUpdated = (lastUpdated: string | { $date: string }) => {
     if (typeof lastUpdated === 'string') {
@@ -56,7 +85,7 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onUpdate, isUp
         <div className="device-primary-info">
           <h3>{device.hostname}</h3>
           <div className="device-meta">
-            <span className="ip-address">{primaryIP}</span>
+            <span className="ip-address">{primaryIp}</span>
             <span className="mac-address">{macAddress}</span>
           </div>
         </div>
@@ -79,11 +108,11 @@ const DeviceItem: React.FC<DeviceItemProps> = ({ device, onClick, onUpdate, isUp
           </div>
           <button
             className="update-device-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const ip = updateIp ?? primaryIP;
-              onUpdate(ip);
-            }}
+              onClick={(e) => {
+                e.stopPropagation();
+                const ip = updateIp ?? primaryIp;
+                onUpdate(ip);
+              }}
             title="Update this device"
             disabled={!!isUpdating}
           >
