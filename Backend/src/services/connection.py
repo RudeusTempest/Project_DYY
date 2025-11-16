@@ -182,11 +182,11 @@ class ConnectionService:
 
 
     @staticmethod
-    async def get_mbps(mbps_interval : float, ip : str, snmp_password : str, interface_index : str):
+    async def get_mbps(ip : str, snmp_password : str, interface_index : str):
 
         bytes_received1, bytes_sent1 = await ConnectionService.get_device_byte_counters(ip, snmp_password, interface_index)
 
-        await asyncio.sleep(mbps_interval)  # Wait for 1 second to get the difference in bytes
+        await asyncio.sleep(1)  # Wait for 1 second to get the difference in bytes
 
         bytes_received2, bytes_sent2 = await ConnectionService.get_device_byte_counters(ip, snmp_password, interface_index)
 
@@ -198,3 +198,72 @@ class ConnectionService:
   
         return  megabits_received_per_second, megabits_sent_per_second
 
+
+
+
+#""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+    @staticmethod
+    def get_cisco_mbps_output(net_connect, device_type):
+        if device_type in ["cisco_ios", "cisco_xr"]:
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            return all_interfaces_output
+        
+
+    @staticmethod
+    def get_cisco_outputs_cli(net_connect, device_type):
+
+        if device_type == "cisco_ios":
+            # Enter enable mode
+            # net_connect.enable()
+
+            # Get command outputs
+            hostname_output = net_connect.send_command("show running-config | include hostname")
+            ip_output = net_connect.send_command("show ip interface brief")
+
+            # Get the first interface from the second line of output
+            interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[1:2].pop())
+            if interface_output:
+                interface_0 = interface_output.group(1)
+            else: interface_0 = "Not found"    
+
+            mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
+            
+            # Get detailed output for ALL interfaces (for bandwidth extraction)
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            
+            raw_date = datetime.now()
+            last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
+
+            info_neighbors_output = net_connect.send_command("show cdp neighbors")
+            # Close connection
+            # net_connect.disconnect()
+
+            return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
+
+
+        if device_type == "cisco_xr":
+
+            # Get command outputs
+            hostname_output = net_connect.send_command("show running-config | include hostname")
+            ip_output = net_connect.send_command("show ip interface brief")
+
+            # Get the first interface from the fourth line of output (XR differs from IOS)
+            interface_output = re.match(r"(\S+)\s+", ip_output.splitlines()[4:5].pop())
+            if interface_output:
+                interface_0 = interface_output.group(1)
+            else: interface_0 = "Not found"    
+
+            mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
+            
+            # Get detailed output for ALL interfaces (for bandwidth extraction)
+            all_interfaces_output = net_connect.send_command("show interfaces")
+            
+            raw_date = datetime.now()
+            last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
+
+            info_neighbors_output = net_connect.send_command("show cdp neighbors")
+            # Close connection
+            # net_connect.disconnect()
+
+            return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
