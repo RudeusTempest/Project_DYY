@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DeviceList from './components/DeviceList';
 import DeviceModal from './components/Modal';
+import AddDeviceModal, { AddDevicePayload } from './components/AddDeviceModal';
 import { NetworkDevice, NetworkInterface, NeighborDevice } from './types';
 
 // API configuration
@@ -226,6 +227,7 @@ const NetworkDeviceMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [updatingIp, setUpdatingIp] = useState<string | null>(null);
   const [credentialIps, setCredentialIps] = useState<Set<string>>(new Set());
+  const [isAddDeviceModalOpen, setAddDeviceModalOpen] = useState(false);
   
   // Theme (light/dark)
   const getInitialTheme = (): 'light' | 'dark' => {
@@ -246,7 +248,8 @@ const NetworkDeviceMonitor: React.FC = () => {
 
   const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
 
-  
+  const openAddDeviceModal = () => setAddDeviceModalOpen(true);
+  const closeAddDeviceModal = () => setAddDeviceModalOpen(false);
 
   // Fetch data from backend API or use mock data
   const fetchDevices = useCallback(async (): Promise<NetworkDevice[] | null> => {
@@ -346,6 +349,65 @@ const NetworkDeviceMonitor: React.FC = () => {
     fetchDevices();
   };
 
+  const handleAddDeviceSubmit = useCallback(
+    async (payload: AddDevicePayload) => {
+      const sanitizedPayload: AddDevicePayload = {
+        device_type: payload.device_type,
+        ip: payload.ip,
+        username: payload.username,
+        password: payload.password,
+        ...(payload.secret ? { secret: payload.secret } : {}),
+      };
+
+      console.log('[API] POST /credentials/add_device - submitting payload:', sanitizedPayload);
+      const response = await fetch(`${API_BASE_URL}/credentials/add_device`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sanitizedPayload),
+      });
+
+      let rawResponse: string | null = null;
+      try {
+        rawResponse = await response.clone().text();
+        if (rawResponse) {
+          console.log('[API] POST /credentials/add_device - response payload:', rawResponse);
+        }
+      } catch {
+        rawResponse = null;
+      }
+
+      if (!response.ok) {
+        let errorMessage = `Failed to add device (status ${response.status})`;
+        if (rawResponse) {
+          try {
+            const parsed = JSON.parse(rawResponse);
+            if (typeof parsed === 'string' && parsed.trim()) {
+              errorMessage = parsed.trim();
+            } else if (parsed && typeof parsed === 'object') {
+              if (typeof (parsed as any).detail === 'string') {
+                errorMessage = (parsed as any).detail;
+              } else if (Array.isArray((parsed as any).detail) && (parsed as any).detail.length > 0) {
+                const firstDetail = (parsed as any).detail[0];
+                if (typeof firstDetail?.msg === 'string') {
+                  errorMessage = firstDetail.msg;
+                }
+              }
+            }
+          } catch {
+            errorMessage = rawResponse;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      await fetchDevices();
+      await fetchCredentialIps();
+    },
+    [fetchCredentialIps, fetchDevices]
+  );
+
   // Update a single device by IP
   const handleUpdateDevice = async (ip: string) => {
     const sanitizedIp = typeof ip === 'string' ? ip.trim() : '';
@@ -407,6 +469,7 @@ const NetworkDeviceMonitor: React.FC = () => {
       <Header
         loading={loading}
         onRefresh={handleRefresh}
+        onAddDevice={openAddDeviceModal}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         theme={theme}
@@ -462,6 +525,11 @@ const NetworkDeviceMonitor: React.FC = () => {
         </div>
       </div>
 
+      <AddDeviceModal
+        isOpen={isAddDeviceModalOpen}
+        onClose={closeAddDeviceModal}
+        onSubmit={handleAddDeviceSubmit}
+      />
       <DeviceModal device={selectedDevice} isOpen={isModalOpen} onClose={closeModal} />
     </div>
   );
