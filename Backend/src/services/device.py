@@ -7,7 +7,7 @@ import asyncio
 class DeviceService:
  
     @staticmethod
-    async def update_device_info(cred, mbps_interval: float = 1.0):
+    async def update_device_info_snmp(cred):
 
         # Pop SNMP password to avoid passing it to netmiko
         snmp_password = cred.pop("snmp_password", None)
@@ -36,7 +36,7 @@ class DeviceService:
                 interface_dict["max_speed"] = max_speed
                 
                 # Gets Mbps sent & received for each interface
-                mbps_received, mbps_sent = await ConnectionService.get_mbps(mbps_interval, cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
                 interface_dict["mbps_received"] = mbps_received
                 interface_dict["mbps_sent"] = mbps_sent    
                 print(f"interface {interface_dict['interface']}: done")
@@ -63,7 +63,7 @@ class DeviceService:
                 interface_dict["max_speed"] = max_speed
 
                 # Gets Mbps sent & received for each interface
-                mbps_received, mbps_sent = await ConnectionService.get_mbps(mbps_interval, cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
                 interface_dict["mbps_received"] = mbps_received
                 interface_dict["mbps_sent"] = mbps_sent    
                 print(f"interface {interface_dict['interface']}: done")
@@ -91,22 +91,22 @@ class DeviceService:
         if not cred:
             return None
 
-        await DeviceService.update_device_info(cred)
+        await DeviceService.update_device_info_snmp(cred)
 
 
     @staticmethod
-    async def periodic_refresh(device_interval: float = 3600, mbps_interval: float = 1.0):
+    async def periodic_refresh_snmp(device_interval: float):
         # Run control_system for all devices periodically (blocking).
         while True:
             creds = CredentialsService.get_all_cred()
             for cred in creds:
                 if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") and cred.get("snmp_password") is not None:
-                    await DeviceService.update_device_info(cred, mbps_interval=1.0)
+                    await DeviceService.update_device_info_snmp(cred)
             await asyncio.sleep(device_interval)
 
 
     @staticmethod
-    async def update_mbps(mbps_interval: float = 1.0):
+    async def update_mbps_snmp(mbps_interval):
         ip_and_snmp_list = CredentialsService.get_all_ip_and_snmp()
         interface_dicts_list = DevicesRepo.get_interface_data()
         # For each device interfaces in DB
@@ -125,9 +125,98 @@ class DeviceService:
                         if interface_indexes is None:
                             print(f"Skipping Mbps update for {interface_data['ip_address']} due to missing SNMP password")
                             continue
-                        interface_data["mbps_received"], interface_data["mbps_sent"] = await ConnectionService.get_mbps(mbps_interval, ip_and_snmp_dict["ip"], ip_and_snmp_dict["snmp_password"], interface_indexes[interface_data["interface"]])
+                        interface_data["mbps_received"], interface_data["mbps_sent"] = await ConnectionService.get_mbps(ip_and_snmp_dict["ip"], ip_and_snmp_dict["snmp_password"], interface_indexes[interface_data["interface"]])
                 
                         # Save this back to MongoDB:
                         DevicesRepo.update_mbps(interface_data["ip_address"], interface_data["mbps_received"], interface_data["mbps_sent"])
                         print(f"Updated Mbps for {interface_data['ip_address']}")
+                        await asyncio.sleep(mbps_interval)
 
+
+
+
+#""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    
+    @staticmethod
+    async def periodic_refresh_cli(device_interval: float):
+        # Run control_system for all devices periodically (blocking).
+        while True:
+            creds = CredentialsService.get_all_cred()
+            for cred in creds:
+                if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") and cred.get("snmp_password") is not None:
+                    await DeviceService.update_device_info_cli(cred)
+            await asyncio.sleep(device_interval)
+
+
+    @staticmethod
+    async def update_device_info_cli(cred):
+        """
+        Main function to update device information
+        Connects to device, retrieves data, extracts info, and saves to database
+        """
+        snmp_password = cred.pop("snmp_password", None)
+        # Connect to device via netmiko
+        connection = ConnectionService.connect(cred)
+
+        if not connection:
+            return None
+
+        if "cisco" in cred["device_type"]:
+            # Send commands and receive outputs
+            hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
+            # Extract details via regex (including bandwidth per interface)
+            mac_address, hostname, interface_data, info_neighbors = ExtractionService.extract_cisco_cli(
+                cred["device_type"], 
+                hostname_output, 
+                ip_output, 
+                mac_output, 
+                info_neighbors_output,
+                all_interfaces_output
+            )
+            
+            # Save details to database
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+            
+
+        elif "juniper" in cred["device_type"]:
+            # Send commands and receive outputs
+            hostname_output, ip_output, mac_output, last_updated, raw_date = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
+            
+            # Extract details via regex (including bandwidth per interface)
+            mac_address, hostname, interface_data = ExtractionService.extract_juniper_cli(cred["device_type"], hostname_output, ip_output, mac_output)
+            
+            # Save details to database
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+
+        # Close connection
+        if connection:
+            connection.disconnect()  
+
+
+    @staticmethod
+    async def update_mbps_loop_cli(mbps_interval):
+        """
+        Run periodic refresh for all devices
+        Updates all device information every interval seconds (default: 1 hour)
+        """
+        
+        while True:
+            creds = CredentialsService.get_all_cred()
+            for cred in creds :
+                snmp_password = cred.pop("snmp_password", None)
+                await DeviceService.update_mbps_cli(cred)
+            await asyncio.sleep(mbps_interval)
+
+
+    @staticmethod
+    async def update_mbps_cli(cred):
+        connection = ConnectionService.connect(cred)
+        if not connection:
+            return None
+        all_interfaces_output = ConnectionService.get_cisco_mbps_output(connection, cred["device_type"])
+        all_interfaces_nea = ExtractionService.extract_bandwidth(all_interfaces_output)
+        DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_nea)
+
+
+    
+      

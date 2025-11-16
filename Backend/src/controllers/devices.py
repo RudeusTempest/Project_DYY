@@ -20,13 +20,20 @@ class DeviceController:
     
 
     @staticmethod
-    async def periodic_refresh(device_interval: float = 3600, mbps_interval: float = 1.0):
-        await DeviceService.periodic_refresh(device_interval, mbps_interval)
+    async def periodic_refresh_snmp(mbps_interval: float):
+        await DeviceService.periodic_refresh_snmp(mbps_interval)
 
 
     @staticmethod
-    async def update_mbps_loop(mbps_interval=1.0):
+    async def update_mbps_loop_snmp(mbps_interval: float):
         while True:
-            await DeviceService.update_mbps(mbps_interval)
-            
+            await DeviceService.update_mbps_snmp(mbps_interval)
+    
              
+
+
+#""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+    @staticmethod
+    async def periodic_refresh_cli(device_interval: float):
+        await DeviceService.periodic_refresh_cli(device_interval)
