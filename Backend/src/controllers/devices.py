@@ -16,12 +16,12 @@ class DeviceController:
 
     @staticmethod
     async def refresh_by_ip(ip, method):
-        await DeviceService.refresh_by_ip(ip, method)
+        return await DeviceService.refresh_by_ip(ip, method)
     
 
     @staticmethod
     async def periodic_refresh_snmp(mbps_interval: float):
-        await DeviceService.periodic_refresh_snmp(mbps_interval)
+        return await DeviceService.periodic_refresh_snmp(mbps_interval)
 
 
     @staticmethod
