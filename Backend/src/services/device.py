@@ -95,9 +95,9 @@ class DeviceService:
         if not cred:
             return None
         if method == "snmp":
-            await DeviceService.update_device_info_snmp(cred)
+            return await DeviceService.update_device_info_snmp(cred)
         elif method == "cli":
-            await DeviceService.update_device_info_cli(cred)    
+            return await DeviceService.update_device_info_cli(cred)    
 
 
     @staticmethod
