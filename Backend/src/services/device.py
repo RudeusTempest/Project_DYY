@@ -90,12 +90,14 @@ class DeviceService:
 
 
     @staticmethod
-    async def refresh_by_ip(ip: str):
+    async def refresh_by_ip(ip: str, method: str):
         cred = CredentialsService.get_one_cred(ip)
         if not cred:
             return None
-
-        await DeviceService.update_device_info_snmp(cred)
+        if method == "snmp":
+            await DeviceService.update_device_info_snmp(cred)
+        elif method == "cli":
+            await DeviceService.update_device_info_cli(cred)    
 
 
     @staticmethod

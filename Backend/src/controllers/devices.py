@@ -15,8 +15,8 @@ class DeviceController:
 
 
     @staticmethod
-    async def refresh_by_ip(ip):
-        await DeviceService.refresh_by_ip(ip)
+    async def refresh_by_ip(ip, method):
+        await DeviceService.refresh_by_ip(ip, method)
     
 
     @staticmethod
