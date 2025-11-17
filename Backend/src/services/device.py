@@ -43,7 +43,7 @@ class DeviceService:
                 # Saves details in database
                 DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
                 print("Saved to DB")
-
+                return True
 
             elif "juniper" in cred["device_type"]:
                 print("Updating Juniper device:", cred["ip"])
