@@ -8,67 +8,71 @@ class DeviceService:
  
     @staticmethod
     async def update_device_info_snmp(cred):
+        try:
+            # Pop SNMP password to avoid passing it to netmiko
+            snmp_password = cred.pop("snmp_password", None)
 
-        # Pop SNMP password to avoid passing it to netmiko
-        snmp_password = cred.pop("snmp_password", None)
+            # Connects to device via netmiko
+            connection = ConnectionService.connect(cred)
+            
+            if "cisco" in cred["device_type"]:
+                print("Updating Cisco device:", cred["ip"])
 
-        # Connects to device via netmiko
-        connection = ConnectionService.connect(cred)
-        
-        if "cisco" in cred["device_type"]:
-            print("Updating Cisco device:", cred["ip"])
+                # Sends commands & recieve outputs
+                hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = ConnectionService.get_cisco_outputs(connection, cred["device_type"])
+                print("Received outputs")
 
-            # Sends commands & recieve outputs
-            hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = ConnectionService.get_cisco_outputs(connection, cred["device_type"])
-            print("Received outputs")
+                # Extracting details via regex
+                mac_address, hostname, interface_data, info_neighbors = ExtractionService.extract_cisco(cred["device_type"], mac_output, hostname_output, ip_output, info_neighbors_output)
+                print("Extracted data")
 
-            # Extracting details via regex
-            mac_address, hostname, interface_data, info_neighbors = ExtractionService.extract_cisco(cred["device_type"], mac_output, hostname_output, ip_output, info_neighbors_output)
-            print("Extracted data")
+                # Getting interface indexes via SNMP (interface_indexes = {interface_name: index})
+                interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
 
-            # Getting interface indexes via SNMP (interface_indexes = {interface_name: index})
-            interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
-
-            # Getting max speed & Mbps sent/received for each 
-            for interface_dict in interface_data: 
-                # Gets max speed for each interface
-                max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                interface_dict["max_speed"] = max_speed
-                
-                # Gets Mbps sent & received for each interface
-                mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                interface_dict["mbps_received"] = mbps_received
-                interface_dict["mbps_sent"] = mbps_sent    
-                print(f"interface {interface_dict['interface']}: done")
-            # Saves details in database
-            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
-            print("Saved to DB")
+                # Getting max speed & Mbps sent/received for each 
+                for interface_dict in interface_data: 
+                    # Gets max speed for each interface
+                    max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                    interface_dict["max_speed"] = max_speed
+                    
+                    # Gets Mbps sent & received for each interface
+                    mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                    interface_dict["mbps_received"] = mbps_received
+                    interface_dict["mbps_sent"] = mbps_sent    
+                    print(f"interface {interface_dict['interface']}: done")
+                # Saves details in database
+                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+                print("Saved to DB")
 
 
-        elif "juniper" in cred["device_type"]:
-            print("Updating Juniper device:", cred["ip"])
-            # Sends commands & recieve outputs
-            hostname_output, ip_output, mac_output, last_updated, raw_date = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
-            print("Received outputs")
-            # Extracting details via regex
-            mac_address, hostname, interface_data = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
-            print("Extracted data")
-            # Getting interface indexes via SNMP (interface_indexes = {interface_name: index})
-            interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
+            elif "juniper" in cred["device_type"]:
+                print("Updating Juniper device:", cred["ip"])
+                # Sends commands & recieve outputs
+                hostname_output, ip_output, mac_output, last_updated, raw_date = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
+                print("Received outputs")
+                # Extracting details via regex
+                mac_address, hostname, interface_data = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
+                print("Extracted data")
+                # Getting interface indexes via SNMP (interface_indexes = {interface_name: index})
+                interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
 
-            # Getting max speed & Mbps sent/received for each 
-            for interface_dict in interface_data: 
-                # Gets max speed for each interface
-                max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                interface_dict["max_speed"] = max_speed
+                # Getting max speed & Mbps sent/received for each 
+                for interface_dict in interface_data: 
+                    # Gets max speed for each interface
+                    max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                    interface_dict["max_speed"] = max_speed
 
-                # Gets Mbps sent & received for each interface
-                mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                interface_dict["mbps_received"] = mbps_received
-                interface_dict["mbps_sent"] = mbps_sent    
-                print(f"interface {interface_dict['interface']}: done")
-            # Saves details in database
-            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+                    # Gets Mbps sent & received for each interface
+                    mbps_received, mbps_sent = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                    interface_dict["mbps_received"] = mbps_received
+                    interface_dict["mbps_sent"] = mbps_sent    
+                    print(f"interface {interface_dict['interface']}: done")
+                # Saves details in database
+                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+                return True
+        except Exception as e:
+            print(f"Error updating device {cred['ip']}: {e}")
+            return False
 
 
     @staticmethod
