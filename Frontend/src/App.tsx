@@ -217,6 +217,63 @@ const findDeviceByIdentifier = (collection: NetworkDevice[], identifier: string)
   );
 };
 
+const requestDeviceByIp = async (ip: string): Promise<NetworkDevice | null> => {
+  const sanitizedIp = typeof ip === 'string' ? ip.trim() : '';
+  if (!sanitizedIp) {
+    return null;
+  }
+
+  const url = `${API_BASE_URL}/devices/get_one_record?ip=${encodeURIComponent(sanitizedIp)}`;
+  console.log(`[API] GET /devices/get_one_record - fetching device ip=${sanitizedIp}`);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    console.warn(`[API] GET /devices/get_one_record - response was not JSON for ip=${sanitizedIp}`);
+    return null;
+  }
+
+  console.log(`[API] GET /devices/get_one_record - raw payload for ip=${sanitizedIp}:`, payload);
+
+  if (typeof payload === 'boolean') {
+    console.log(`[API] GET /devices/get_one_record - boolean response for ip=${sanitizedIp}: ${payload}`);
+    return null;
+  }
+
+  let candidates: unknown[] = [];
+  if (Array.isArray(payload)) {
+    candidates = payload;
+  } else if (payload && typeof payload === 'object') {
+    const maybeRecord = payload as Record<string, unknown>;
+    const dataField = (maybeRecord as { data?: unknown }).data;
+    if (Array.isArray(dataField)) {
+      candidates = dataField as unknown[];
+    } else {
+      candidates = [maybeRecord];
+    }
+  }
+
+  if (!candidates.length) {
+    console.warn(`[API] GET /devices/get_one_record - empty payload for ip=${sanitizedIp}`);
+    return null;
+  }
+
+  const normalizedCandidates = normalizeDeviceCollection(candidates);
+  if (!normalizedCandidates.length) {
+    console.warn(`[API] GET /devices/get_one_record - unable to normalize payload for ip=${sanitizedIp}`);
+    return null;
+  }
+
+  const matched = findDeviceByIdentifier(normalizedCandidates, sanitizedIp);
+  return matched ?? normalizedCandidates[0] ?? null;
+};
+
 // Main App Component
 const NetworkDeviceMonitor: React.FC = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
@@ -438,16 +495,22 @@ const NetworkDeviceMonitor: React.FC = () => {
         console.log(`[API] POST /devices/refresh_one - no JSON response for ip=${sanitizedIp}`);
       }
 
-      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${sanitizedIp}, refreshing device list`);
-      const latestDevices = await requestDevices();
-      setDevices(latestDevices);
+      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${sanitizedIp}, fetching updated record`);
+      const updatedDevice = await requestDeviceByIp(sanitizedIp);
       setError(null);
 
-      const updatedDevice = findDeviceByIdentifier(latestDevices, sanitizedIp);
       if (!updatedDevice) {
-        console.warn(`[API] Device not found after refresh for identifier "${sanitizedIp}"`);
+        console.warn(`[API] GET /devices/get_one_record - no updated data returned for identifier "${sanitizedIp}"`);
         return;
       }
+
+      setDevices((current) => {
+        const matched = findDeviceByIdentifier(current, sanitizedIp);
+        if (!matched) {
+          return [updatedDevice, ...current];
+        }
+        return current.map((device) => (device === matched ? updatedDevice : device));
+      });
 
       setSelectedDevice((current) => {
         if (!current) return current;
