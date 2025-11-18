@@ -1,4 +1,5 @@
 from src.config.database import db
+from typing import Optional, List, Dict, Any
 
 
 cred_collection = db["devices_cred"]
@@ -7,24 +8,40 @@ cred_collection = db["devices_cred"]
 class CredentialsRepo:  
 
     @staticmethod
-    def add_device_cred(cred: dict):
-        cred_collection.insert_one(cred)
+    def add_device_cred(cred: dict) -> None:
+        try:
+            cred_collection.insert_one(cred)
+        except Exception as e:
+            print(f"Error adding device credentials: {e}")
+            raise
 
 
     @staticmethod
-    def get_all_cred():
-        cred_list = list(cred_collection.find({}, {"_id": 0}))
-        return cred_list
+    def get_all_cred() -> List[Dict[str, Any]]:
+        try:
+            cred_list = list(cred_collection.find({}, {"_id": 0}))
+            return cred_list
+        except Exception as e:
+            print(f"Error getting all credentials: {e}")
+            return []
     
 
     @staticmethod
-    def get_one_cred(ip: str):
-        device_cred = cred_collection.find_one({"ip": ip}, {"_id": 0})
-        return device_cred
+    def get_one_cred(ip: str) -> Optional[Dict[str, Any]]:
+        try:
+            device_cred = cred_collection.find_one({"ip": ip}, {"_id": 0})
+            return device_cred
+        except Exception as e:
+            print(f"Error getting credential for IP {ip}: {e}")
+            return None
     
 
     @staticmethod
-    def get_all_ip_and_snmp():
-        ip_and_snmp_list = list(cred_collection.find({}, {"ip": 1, "snmp_password": 1, "_id": 0}))
-        return ip_and_snmp_list
+    def get_all_ip_and_snmp() -> List[Dict[str, Any]]:
+        try:
+            ip_and_snmp_list = list(cred_collection.find({}, {"ip": 1, "snmp_password": 1, "_id": 0}))
+            return ip_and_snmp_list
+        except Exception as e:
+            print(f"Error getting IP and SNMP list: {e}")
+            return []
     

@@ -1,22 +1,37 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from src.models.device import device_cred
 from src.controllers.credentials import CredentialsController
+from typing import List, Dict, Any
 
 
 router = APIRouter()
 
 
 @router.post("/add_device")    
-async def add_device(cred: device_cred):
-    CredentialsController.add_device_cred(cred)
-    return True
+async def add_device(cred: device_cred) -> Dict[str, bool]:
+    try:
+        CredentialsController.add_device_cred(cred)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add device: {str(e)}")
 
 
 @router.get("/connection_details")
-async def get_all_cred():
-    return CredentialsController.get_all_cred()
+async def get_all_cred() -> List[Dict[str, Any]]:
+    try:
+        return CredentialsController.get_all_cred()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve credentials: {str(e)}")
 
 
 @router.get("/get_one_cred")
-async def get_one_cred(ip: str):
-    return CredentialsController.get_one_cred(ip)
+async def get_one_cred(ip: str) -> Dict[str, Any]:
+    try:
+        result = CredentialsController.get_one_cred(ip)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Credentials not found for IP: {ip}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve credential: {str(e)}")

@@ -1,31 +1,32 @@
 from src.services.device import DeviceService
 from src.repositories.devices import DevicesRepo
+from typing import Optional, List, Dict, Any
 
 
 class DeviceController:
 
     @staticmethod
-    def get_latest_records():
+    def get_latest_records() -> List[Dict[str, Any]]:
         return DeviceService.get_latest_records()
     
 
     @staticmethod
-    def get_one_record(ip: str):
+    def get_one_record(ip: str) -> List[Dict[str, Any]]:
         return DevicesRepo.get_one_record(ip)
 
 
     @staticmethod
-    async def refresh_by_ip(ip, method):
+    async def refresh_by_ip(ip: str, method: str) -> Optional[bool]:
         return await DeviceService.refresh_by_ip(ip, method)
     
 
     @staticmethod
-    async def periodic_refresh_snmp(mbps_interval: float):
+    async def periodic_refresh_snmp(mbps_interval: float) -> None:
         return await DeviceService.periodic_refresh_snmp(mbps_interval)
 
 
     @staticmethod
-    async def update_mbps_loop_snmp(mbps_interval: float):
+    async def update_mbps_loop_snmp(mbps_interval: float) -> None:
         while True:
             await DeviceService.update_mbps_snmp(mbps_interval)
     
@@ -35,5 +36,5 @@ class DeviceController:
 #""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     @staticmethod
-    async def periodic_refresh_cli(device_interval: float):
+    async def periodic_refresh_cli(device_interval: float) -> None:
         await DeviceService.periodic_refresh_cli(device_interval)

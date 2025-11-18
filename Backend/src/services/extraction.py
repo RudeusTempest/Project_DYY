@@ -1,10 +1,11 @@
 import re
+from typing import Optional, Tuple, List, Dict, Any
 
 
 class ExtractionService:
 
     @staticmethod 
-    def extract_cisco(device_type, mac_output, hostname_output, ip_output, info_neighbors_output):
+    def extract_cisco(device_type: str, mac_output: str, hostname_output: str, ip_output: str, info_neighbors_output: str) -> Optional[Tuple[str, str, List[Dict[str, Any]], List[Dict[str, str]]]]:
 
         if device_type == "cisco_ios":
 
@@ -99,7 +100,7 @@ class ExtractionService:
 
 
     @staticmethod
-    def extract_juniper(device_type, hostname_output, ip_output, mac_output):
+    def extract_juniper(device_type: str, hostname_output: str, ip_output: str, mac_output: str) -> Optional[Tuple[str, str, List[Dict[str, Any]]]]:
 
         if device_type == "juniper_junos":
 
@@ -148,9 +149,12 @@ class ExtractionService:
 #""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     @staticmethod    
-    def extract_bandwidth(all_interfaces_output=None):
+    def extract_bandwidth(all_interfaces_output: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         bandwidth_data = {}
         try:
+            if all_interfaces_output is None:
+                return {}
+                
             # Split by interface sections
             interface_sections = re.split(r'\n(?=[A-Za-z].*is\s+(up|down|administratively down))', all_interfaces_output)
             
@@ -178,7 +182,7 @@ class ExtractionService:
         
 
     @staticmethod
-    def extract_bandwidth_per_interface_cisco(interface_output):
+    def extract_bandwidth_per_interface_cisco(interface_output: str) -> Dict[str, Any]:
         """
         Extract detailed bandwidth information for a specific Cisco interface
         This includes current utilization, max capacity, and errors
@@ -253,7 +257,7 @@ class ExtractionService:
         
 
     @staticmethod 
-    def extract_cisco_cli(device_type, hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output=None):
+    def extract_cisco_cli(device_type: str, hostname_output: str, ip_output: str, mac_output: str, info_neighbors_output: str, all_interfaces_output: Optional[str] = None) -> Optional[Tuple[str, str, List[Dict[str, Any]], List[Dict[str, str]]]]:
         """
         Extract Cisco device information including interface details and bandwidth per interface
         """
