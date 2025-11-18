@@ -292,17 +292,23 @@ class DeviceService:
 
             elif "juniper" in cred["device_type"]:
                 # Send commands and receive outputs
-                outputs = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
+                outputs = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
                 if outputs is None:
-                    print(f"Failed to get outputs from device {cred.get('ip', 'unknown')}")
+                    print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
                     return None
                     
-                hostname_output, ip_output, mac_output, last_updated, raw_date = outputs
+                hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date = outputs
                 
                 # Extract details via regex (including bandwidth per interface)
-                extraction_result = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
+                extraction_result = ExtractionService.extract_juniper_cli(
+                    cred["device_type"], 
+                    hostname_output, 
+                    ip_output, 
+                    mac_output,
+                    all_interfaces_output
+                )
                 if extraction_result is None:
-                    print(f"Failed to extract data from device {cred.get('ip', 'unknown')}")
+                    print(f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}")
                     return None
                     
                 mac_address, hostname, interface_data = extraction_result
@@ -348,18 +354,38 @@ class DeviceService:
                 print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
                 return None
             
-            all_interfaces_output = ConnectionService.get_cisco_mbps_output(connection, cred["device_type"])
-            if all_interfaces_output is None:
-                print(f"Failed to get Mbps output from device {cred.get('ip', 'unknown')}")
+            if "cisco" in cred["device_type"]:
+                all_interfaces_output = ConnectionService.get_cisco_mbps_output(connection, cred["device_type"])
+                if all_interfaces_output is None:
+                    print(f"Failed to get Mbps output from device {cred.get('ip', 'unknown')}")
+                    return None
+                    
+                all_interfaces_data = ExtractionService.extract_bandwidth(all_interfaces_output)
+                if all_interfaces_data is None or not all_interfaces_data:
+                    print(f"Failed to extract bandwidth data from device {cred.get('ip', 'unknown')}")
+                    return None
+                    
+                DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_data)
+                return True
+            
+            elif "juniper" in cred["device_type"]:
+                all_interfaces_output = ConnectionService.get_juniper_mbps_output(connection, cred["device_type"])
+                if all_interfaces_output is None:
+                    print(f"Failed to get Mbps output from device {cred.get('ip', 'unknown')}")
+                    return None
+                    
+                all_interfaces_data = ExtractionService.extract_bandwidth_juniper(all_interfaces_output)
+                if all_interfaces_data is None or not all_interfaces_data:
+                    print(f"Failed to extract bandwidth data from device {cred.get('ip', 'unknown')}")
+                    return None
+                    
+                DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_data)
+                return True
+            
+            else:
+                print(f"Unsupported device type: {cred.get('device_type', 'unknown')}")
                 return None
                 
-            all_interfaces_data = ExtractionService.extract_bandwidth(all_interfaces_output)
-            if all_interfaces_data is None or not all_interfaces_data:
-                print(f"Failed to extract bandwidth data from device {cred.get('ip', 'unknown')}")
-                return None
-                
-            DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_data)
-            return True
         except Exception as e:
             print(f"Error updating Mbps CLI for {cred.get('ip', 'unknown')}: {e}")
             return None

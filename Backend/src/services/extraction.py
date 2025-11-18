@@ -256,6 +256,42 @@ class ExtractionService:
             return {}
         
 
+    @staticmethod    
+    def extract_bandwidth_juniper(all_interfaces_output: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+        """
+        Extract bandwidth for all Juniper interfaces from "show interfaces extensive" output
+        """
+        bandwidth_data = {}
+        try:
+            if all_interfaces_output is None:
+                return {}
+                
+            # Split by "Physical interface:" sections
+            interface_sections = re.split(r'\n(?=Physical interface:)', all_interfaces_output)
+            
+            for section in interface_sections:
+                if not section.strip():
+                    continue
+                
+                # Extract interface name from "Physical interface: ge-0/0/0, Enabled, Physical link is Up"
+                interface_match = re.search(r'Physical interface:\s+([A-Za-z0-9\/\-\.]+)', section)
+                if not interface_match:
+                    continue
+                
+                interface_name = interface_match.group(1)
+                
+                # Extract bandwidth for this interface
+                bandwidth_info = ExtractionService.extract_bandwidth_per_interface_juniper(section)
+                
+                bandwidth_data[interface_name] = bandwidth_info
+            
+            return bandwidth_data
+        
+        except Exception as e:
+            print(f"Error extracting Juniper interfaces: {e}")
+            return {}
+
+
     @staticmethod 
     def extract_cisco_cli(device_type: str, hostname_output: str, ip_output: str, mac_output: str, info_neighbors_output: str, all_interfaces_output: Optional[str] = None) -> Optional[Tuple[str, str, List[Dict[str, Any]], List[Dict[str, str]]]]:
         """
@@ -388,3 +424,140 @@ class ExtractionService:
                     info_neighbors.append(neighbor)
 
             return mac_address, hostname, interface_data, info_neighbors    
+
+
+    @staticmethod
+    def extract_bandwidth_per_interface_juniper(interface_output: str) -> Dict[str, Any]:
+        """
+        Extract detailed bandwidth information for a specific Juniper interface
+        This includes current utilization, max capacity, and errors
+        
+        Returns dict with:
+        - bandwidth_max_mbps: Maximum configured bandwidth (in Mbps)
+        - input_rate_bps: Current input data rate in bps
+        - output_rate_bps: Current output data rate in bps
+        - mtu: Maximum Transmission Unit size
+        - input_errors: Total input errors
+        - output_errors: Total output errors
+        """
+        try:
+            # Extract Speed (Maximum Bandwidth)
+            # Format: Speed: 1000mbps
+            speed_match = re.search(r"Speed:\s+(\d+)mbps", interface_output)
+            bandwidth_max_mbps = int(speed_match.group(1)) if speed_match else None
+            
+            # Extract MTU (Maximum Transmission Unit)
+            mtu_match = re.search(r"MTU:\s+(\d+)", interface_output)
+            mtu = mtu_match.group(1) if mtu_match else None
+            
+            # Extract input rate (bits per second)
+            # Format: Input rate     : 5000 bps (4 pps)
+            input_rate_match = re.search(r"Input\s+rate\s*:\s*(\d+)\s+bps", interface_output)
+            input_rate_bps = int(input_rate_match.group(1)) if input_rate_match else 0
+            
+            # Extract output rate (bits per second)
+            # Format: Output rate    : 5000 bps (4 pps)
+            output_rate_match = re.search(r"Output\s+rate\s*:\s*(\d+)\s+bps", interface_output)
+            output_rate_bps = int(output_rate_match.group(1)) if output_rate_match else 0
+            
+            # Extract input errors
+            input_errors_match = re.search(r"Input\s+errors:\s+(\d+)", interface_output)
+            input_errors = int(input_errors_match.group(1)) if input_errors_match else 0
+            
+            # Extract output errors
+            output_errors_match = re.search(r"Output\s+errors:\s+(\d+)", interface_output)
+            output_errors = int(output_errors_match.group(1)) if output_errors_match else 0
+            
+            # Calculate utilization percentages if bandwidth is known
+            input_utilization_percent = 0
+            output_utilization_percent = 0
+            if bandwidth_max_mbps and bandwidth_max_mbps > 0:
+                bandwidth_max_bps = bandwidth_max_mbps * 1_000_000
+                input_utilization_percent = round((input_rate_bps / bandwidth_max_bps) * 100, 2)
+                output_utilization_percent = round((output_rate_bps / bandwidth_max_bps) * 100, 2)
+            
+            return {
+                "bandwidth_max_mbps": bandwidth_max_mbps,
+                "input_rate_bps": input_rate_bps,
+                "input_rate_kbps": round(input_rate_bps / 1000, 2),
+                "output_rate_bps": output_rate_bps,
+                "output_rate_kbps": round(output_rate_bps / 1000, 2),
+                "input_utilization_percent": input_utilization_percent,
+                "output_utilization_percent": output_utilization_percent,
+                "mtu": mtu,
+                "input_errors": input_errors,
+                "output_errors": output_errors
+            }
+        except Exception as e:
+            print(f"Error extracting Juniper bandwidth: {e}")
+            return {}
+
+
+    @staticmethod 
+    def extract_juniper_cli(device_type: str, hostname_output: str, ip_output: str, mac_output: str, all_interfaces_output: Optional[str] = None) -> Optional[Tuple[str, str, List[Dict[str, Any]]]]:
+        """
+        Extract Juniper device information including interface details and bandwidth per interface
+        """
+
+        if device_type == "juniper_junos":
+
+            # Extract basic device info
+            mac_match = re.search(r"Hardware address: (\S+)", mac_output)
+            if mac_match:
+                mac_address = mac_match.group(1)
+            else: 
+                mac_address = "Not found" 
+
+            hostname_match = re.search(r"host-name\s+(\S+);", hostname_output)
+            if hostname_match:
+                hostname = hostname_match.group(1)
+            else: 
+                hostname = "Hostname not found"     
+
+            interface_data = []
+            for line in ip_output.splitlines()[1:]:
+                # Skip empty lines
+                if not line.strip():
+                    continue
+
+                # Regex to match interface + optional protocol + IP + optional remote IP
+                # Example: sp-0/0/0.16383          up    up   inet     10.0.0.1  
+                match = re.match(r'^(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+)\s+([\d\.\/]+)(?:\s+-->\s+([\d\.\/]+))?)?', line)
+
+                if match:
+                    interface_name = match.group(1)
+                    admin_status = match.group(2)
+                    link_status = match.group(3)
+                    protocol = match.group(4) if match.group(4) else "Unassigned"
+                    ip_address = match.group(5) if match.group(5) else "Unassigned"
+                    remote_ip = match.group(6) if match.group(6) else None
+
+                    # Initialize interface data with basic info
+                    interface_info = {
+                        "Interface": interface_name,
+                        "Status": f"{admin_status}/{link_status}",
+                        "Protocol": protocol,
+                        "IP_Address": ip_address,
+                        "Remote IP": remote_ip,
+                        "bandwidth": {}
+                    }
+                    
+                    # If we have detailed interface output, extract bandwidth info
+                    if all_interfaces_output:
+                        # Find the section for this specific interface
+                        # Juniper format: "Physical interface: ge-0/0/0, Enabled, Physical link is Up"
+                        base_interface = interface_name.split('.')[0]  # Get base interface without unit
+                        interface_section = re.search(
+                            f"Physical interface: {base_interface},.*?(?=Physical interface:|$)", 
+                            all_interfaces_output, 
+                            re.DOTALL
+                        )
+                        if interface_section:
+                            bandwidth_info = ExtractionService.extract_bandwidth_per_interface_juniper(
+                                interface_section.group(0)
+                            )
+                            interface_info["bandwidth"] = bandwidth_info
+                    
+                    interface_data.append(interface_info)
+
+            return mac_address, hostname, interface_data

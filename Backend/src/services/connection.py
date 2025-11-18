@@ -275,6 +275,18 @@ class ConnectionService:
         
 
     @staticmethod
+    def get_juniper_mbps_output(net_connect: Any, device_type: str) -> Optional[str]:
+        try:
+            if device_type == "juniper_junos":
+                all_interfaces_output = net_connect.send_command("show interfaces extensive")
+                return all_interfaces_output
+            return None
+        except Exception as e:
+            print(f"Error getting Juniper Mbps output for {device_type}: {e}")
+            return None
+        
+
+    @staticmethod
     def get_cisco_outputs_cli(net_connect: Any, device_type: str) -> Optional[Tuple[str, str, str, str, str, str, datetime]]:
         try:
             if device_type == "cisco_ios":
@@ -339,4 +351,42 @@ class ConnectionService:
                 return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
         except Exception as e:
             print(f"Error getting Cisco CLI outputs for {device_type}: {e}")
+            return None
+
+
+    @staticmethod
+    def get_juniper_outputs_cli(net_connect: Any, device_type: str) -> Optional[Tuple[str, str, str, str, str, datetime]]:
+        try:
+            if device_type == "juniper_junos":
+                # Enter CLI mode
+                net_connect.send_command("cli")
+                # Disable pagination
+                net_connect.send_command("set cli screen-length 0")
+                
+                # Get command outputs
+                hostname_output = net_connect.send_command("show configuration system host-name")
+                ip_output = net_connect.send_command("show interfaces terse")
+
+                lines = ip_output.splitlines()[1:2]
+                if not lines:
+                    print(f"No interface data found for {device_type}")
+                    return None
+                    
+                interface_output = re.match(r"(\S+)\s+", lines[0])
+                interface_0 = interface_output.group(1) if interface_output else "Not found"
+
+                mac_output = net_connect.send_command(f"show interfaces {interface_0} | match Hardware")
+                
+                # Get detailed output for ALL interfaces (for bandwidth extraction)
+                all_interfaces_output = net_connect.send_command("show interfaces extensive")
+                
+                raw_date = datetime.now()
+                last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
+
+                # Close connection
+                # net_connect.disconnect()
+
+                return hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date
+        except Exception as e:
+            print(f"Error getting Juniper CLI outputs for {device_type}: {e}")
             return None
