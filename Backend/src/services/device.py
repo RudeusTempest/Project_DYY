@@ -151,6 +151,15 @@ class DeviceService:
 
 
     @staticmethod
+    def get_one_record(ip: str) -> List[Dict[str, Any]]:
+        try:
+            return DevicesRepo.get_one_record(ip)
+        except Exception as e:
+            print(f"Error getting record for IP {ip}: {e}")
+            return []
+
+
+    @staticmethod
     async def refresh_by_ip(ip: str, method: str) -> Optional[bool]:
         try:
             cred = CredentialsService.get_one_cred(ip)

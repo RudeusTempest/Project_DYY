@@ -12,7 +12,7 @@ class DeviceController:
 
     @staticmethod
     def get_one_record(ip: str) -> List[Dict[str, Any]]:
-        return DevicesRepo.get_one_record(ip)
+        return DeviceService.get_one_record(ip)
 
 
     @staticmethod

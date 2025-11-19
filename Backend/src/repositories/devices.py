@@ -61,7 +61,7 @@ class DevicesRepo:
     @staticmethod
     def get_one_record(ip: str) -> List[Dict[str, Any]]:
         try:
-            return list(info_collection.find({"ip": ip}, {"_id": 0}))
+            return list(info_collection.find({"interface.ip_address": ip}, {"_id": 0}))
         except Exception as e:
             print(f"Error getting record for IP {ip}: {e}")
             return []
