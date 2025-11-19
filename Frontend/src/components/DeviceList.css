@@ -1,0 +1,15 @@
+.device-list {
+  width: 100%;
+}
+
+.device-list__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.device-list__empty {
+  color: var(--muted-text);
+  text-align: center;
+  margin-top: 2rem;
+}

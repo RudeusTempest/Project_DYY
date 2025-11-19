@@ -1,0 +1,101 @@
+.device-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.device-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+.device-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.device-card__name {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.device-card__ip {
+  margin: 0.15rem 0 0;
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}
+
+.device-card__ip--missing {
+  color: var(--status-unauthorized);
+}
+
+.device-card__status {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.device-card__status--active {
+  background-color: var(--status-active);
+}
+
+.device-card__status--inactive {
+  background-color: var(--status-inactive);
+}
+
+.device-card__status--unauthorized {
+  background-color: var(--status-unauthorized);
+}
+
+.device-card__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.device-card__details strong {
+  display: block;
+  color: var(--text-color);
+  font-size: 1.25rem;
+}
+
+.device-card__details span {
+  display: block;
+  color: var(--muted-text);
+  font-size: 0.85rem;
+}
+
+.device-card__updated-label {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.device-card__update-button {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--accent-color);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.device-card__update-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.device-card__update-button:not(:disabled):hover {
+  opacity: 0.85;
+}

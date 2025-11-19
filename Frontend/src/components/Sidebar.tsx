@@ -1,67 +1,43 @@
-import React, { useMemo } from 'react';
-import { NetworkDevice } from '../types';
+import React from 'react';
+import './Sidebar.css';
 
-type SidebarProps = {
-  devices: NetworkDevice[];
-  loading: boolean;
-};
+interface SidebarCounts {
+  total: number;
+  active: number;
+  inactive: number;
+  unauthorized: number;
+}
 
-const Sidebar: React.FC<SidebarProps> = ({ devices, loading }) => {
-  const stats = useMemo(() => {
-    return devices.reduce(
-      (acc, device) => {
-        acc.total++;
+interface SidebarProps {
+  counts: SidebarCounts;
+}
 
-        const interfaces = Array.isArray(device.interface) ? device.interface : [];
-        const hasActivePort = interfaces.some(port => {
-          const s = (port && (port.status ?? (port as any).Status)) as unknown;
-          const v = typeof s === 'string' ? s.toLowerCase().replace(/\s+/g, '') : '';
-          return v.includes('up/up');
-        });
-        if (device.hostname === "Hostname not found") {
-          acc.unauthorized++;
-        } else if (hasActivePort) {
-          acc.active++;
-        } else {
-          acc.inactive++;
-        }
-
-        return acc;
-      },
-      { total: 0, active: 0, inactive: 0, unauthorized: 0 }
-    );
-  }, [devices]);
-
+// Simple fixed sidebar that displays how many devices fall into each status.
+// The parent (App) performs the actual counting so this component only cares
+// about display logic.
+const Sidebar: React.FC<SidebarProps> = ({ counts }) => {
   return (
-    <div className="sidebar">
-      <div className="sidebar-content">
-        <h3>Device Monitor</h3>
-
-        {/* Search moved to header */}
-
-        <div className="sidebar-separator"></div>
-
-        <div className="stat-item total">
-          <div className="stat-label">Total Devices</div>
-          <div className="stat-value">{stats.total}</div>
-        </div>
-
-        <div className="stat-item active">
-          <div className="stat-label">Active</div>
-          <div className="stat-value">{stats.active}</div>
-        </div>
-
-        <div className="stat-item inactive">
-          <div className="stat-label">Inactive</div>
-          <div className="stat-value">{stats.inactive}</div>
-        </div>
-
-        <div className="stat-item unauthorized">
-          <div className="stat-label">Unauthorized</div>
-          <div className="stat-value">{stats.unauthorized}</div>
-        </div>
-      </div>
-    </div>
+    <aside className="sidebar">
+      <h2 className="sidebar__title">Devices</h2>
+      <ul className="sidebar__list">
+        <li className="sidebar__item sidebar__item--total">
+          <span>Total Devices</span>
+          <strong>{counts.total}</strong>
+        </li>
+        <li className="sidebar__item sidebar__item--active">
+          <span>Active Devices</span>
+          <strong>{counts.active}</strong>
+        </li>
+        <li className="sidebar__item sidebar__item--inactive">
+          <span>Inactive Devices</span>
+          <strong>{counts.inactive}</strong>
+        </li>
+        <li className="sidebar__item sidebar__item--unauthorized">
+          <span>Unauthorized Devices</span>
+          <strong>{counts.unauthorized}</strong>
+        </li>
+      </ul>
+    </aside>
   );
 };
 

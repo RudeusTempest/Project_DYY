@@ -1,61 +1,64 @@
 import React from 'react';
-import { NetworkDevice } from '../types';
-import DeviceItem from './DeviceItem';
+import './DeviceList.css';
+import DeviceCard from './DeviceCard';
+import {
+  DeviceRecord,
+  deriveDeviceStatus,
+  ProtocolMethod,
+} from '../api/devices';
+import { CredentialRecord } from '../api/credentials';
 
-type DeviceListProps = {
-  devices: NetworkDevice[];
-  onDeviceClick: (device: NetworkDevice) => void;
-  onUpdateDevice: (ip: string) => void;
-  updatingIp?: string | null;
-  credentialIps?: Set<string>;
-};
+interface DeviceListProps {
+  devices: DeviceRecord[];
+  credentialMap: Record<string, CredentialRecord>;
+  protocol: ProtocolMethod;
+  onSelectDevice: (device: DeviceRecord) => void;
+  onRefreshDevice: (ip: string) => Promise<void> | void;
+}
 
+// The device list simply handles layout and mapping over DeviceCard components.
+// All heavy logic (fetching, status calculation, etc.) happens in App so this
+// stays approachable.
 const DeviceList: React.FC<DeviceListProps> = ({
   devices,
-  onDeviceClick,
-  onUpdateDevice,
-  updatingIp,
-  credentialIps,
+  credentialMap,
+  protocol,
+  onSelectDevice,
+  onRefreshDevice,
 }) => {
-  const normalizeIp = (value: unknown): string | null => {
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      return trimmed.length ? trimmed : null;
+  const renderContent = () => {
+    if (devices.length === 0) {
+      return (
+        <p className="device-list__empty">
+          No devices found. Try adjusting your search or refresh the data.
+        </p>
+      );
     }
-    if (value == null) return null;
-    const stringified = String(value).trim();
-    return stringified.length ? stringified : null;
+
+    return (
+      <div className="device-list__grid">
+        {devices.map((device) => {
+          const relatedCredential = device.primaryIp
+            ? credentialMap[device.primaryIp]
+            : undefined;
+
+          return (
+            <DeviceCard
+              key={`${device.mac}-${device.hostname}`}
+              device={device}
+              credential={relatedCredential}
+              protocol={protocol}
+              status={deriveDeviceStatus(device)}
+              onSelect={onSelectDevice}
+              onRefresh={onRefreshDevice}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
-  return (
-    <div className="devices-list">
-      {devices.map((device, index) => {
-        const safeInterfaces = Array.isArray(device.interface) ? device.interface : [];
-        const candidateIps = safeInterfaces
-          .map((port) => normalizeIp(port?.ip_address ?? (port as any)?.IP_Address))
-          .filter((ip): ip is string => Boolean(ip));
-        const preferredIp = credentialIps ? candidateIps.find((ip) => credentialIps.has(ip)) : undefined;
-        const primary = candidateIps[0];
-        const effectiveIp = preferredIp ?? primary;
-        const deviceKey =
-          (device.Mac && device.Mac !== 'Not found' && device.Mac) ||
-          device.hostname ||
-          primary ||
-          `device-${index}`;
-
-        return (
-          <DeviceItem
-            key={deviceKey}
-            device={device}
-            onClick={() => onDeviceClick(device)}
-            onUpdate={onUpdateDevice}
-            isUpdating={Boolean(effectiveIp && effectiveIp === updatingIp)}
-            updateIp={preferredIp}
-          />
-        );
-      })}
-    </div>
-  );
+  return <section className="device-list">{renderContent()}</section>;
 };
 
 export default DeviceList;

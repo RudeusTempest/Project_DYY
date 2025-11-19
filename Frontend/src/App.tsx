@@ -1,601 +1,249 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DeviceList from './components/DeviceList';
-import DeviceModal from './components/Modal';
-import AddDeviceModal, { AddDevicePayload } from './components/AddDeviceModal';
-import { NetworkDevice, NetworkInterface, NeighborDevice } from './types';
+import DeviceDetailsModal from './components/DeviceDetailsModal';
+import SettingsModal from './components/SettingsModal';
+import {
+  DeviceRecord,
+  fetchAllDevices,
+  fetchDeviceByIp,
+  refreshDeviceByIp,
+  deriveDeviceStatus,
+  ProtocolMethod,
+} from './api/devices';
+import {
+  CredentialRecord,
+  fetchAllCredentials,
+} from './api/credentials';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
 
-// API configuration
-const API_BASE_URL = 'http://localhost:8000';
-
-const coerceString = (value: unknown, fallback = ''): string => {
-  if (typeof value === 'string') return value;
-  if (value == null) return fallback;
-  return String(value);
-};
-
-const coerceNumber = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-  return null;
-};
-
-const normalizeInterfaces = (interfaces: unknown): NetworkInterface[] => {
-  if (!Array.isArray(interfaces)) return [];
-  return interfaces.map((raw, idx) => {
-    const safe = raw ?? {};
-    const name = coerceString(
-      (safe as any).interface ?? (safe as any).Interface,
-      `Port ${idx + 1}`
-    );
-    const ip = coerceString(
-      (safe as any).ip_address ?? (safe as any).IP_Address ?? (safe as any).ip,
-      'unassigned'
-    );
-    const status = coerceString(
-      (safe as any).status ?? (safe as any).Status,
-      'unknown'
-    );
-    const normalized: NetworkInterface = {
-      interface: name,
-      ip_address: ip,
-      status,
-    };
-    const maxSpeed = coerceNumber(
-      (safe as any).max_speed ?? (safe as any).maxSpeed ?? (safe as any).speed
-    );
-    const mbpsReceived = coerceNumber(
-      (safe as any).mbps_received ?? (safe as any).mbpsReceived
-    );
-    const mbpsSent = coerceNumber(
-      (safe as any).mbps_sent ?? (safe as any).mbpsSent
-    );
-
-    if (maxSpeed !== null) {
-      normalized.max_speed = maxSpeed;
-    }
-    if (mbpsReceived !== null) {
-      normalized.mbps_received = mbpsReceived;
-    }
-    if (mbpsSent !== null) {
-      normalized.mbps_sent = mbpsSent;
-    }
-
-    return normalized;
-  });
-};
-
-const normalizeNeighbors = (neighbors: unknown): NeighborDevice[] => {
-  if (!Array.isArray(neighbors)) return [];
-
-  return neighbors
-    .map((raw, idx) => {
-      const safe = raw ?? {};
-      const device_id = coerceString(
-        (safe as any).device_id ?? (safe as any).deviceId,
-        ''
-      );
-      const local_interface = coerceString(
-        (safe as any).local_interface ?? (safe as any).localInterface,
-        ''
-      );
-      const port_id = coerceString(
-        (safe as any).port_id ?? (safe as any).portId,
-        ''
-      );
-
-      if (!device_id && !local_interface && !port_id) {
-        return null;
-      }
-
-      const neighbor: NeighborDevice = {
-        device_id: device_id || `Neighbor ${idx + 1}`,
-        local_interface: local_interface || 'Unknown interface',
-      };
-      if (port_id) {
-        neighbor.port_id = port_id;
-      }
-      return neighbor;
-    })
-    .filter((neighbor): neighbor is NeighborDevice => Boolean(neighbor));
-};
-
-const normalizeDevice = (raw: unknown): NetworkDevice => {
-  const source = (raw ?? {}) as Record<string, unknown>;
-  const mac = coerceString(source.Mac ?? source.mac, 'Not found');
-  const hostname = coerceString(source.hostname, 'Hostname not found');
-  const lastUpdatedSource =
-    source['last updated at'] ??
-    source.last_updated_at ??
-    source.lastUpdated ??
-    source.last_update;
-
-  let lastUpdated: string | { $date: string };
-  if (typeof lastUpdatedSource === 'string') {
-    lastUpdated = lastUpdatedSource;
-  } else if (
-    lastUpdatedSource &&
-    typeof lastUpdatedSource === 'object' &&
-    typeof (lastUpdatedSource as any).$date === 'string'
-  ) {
-    lastUpdated = { $date: (lastUpdatedSource as any).$date };
-  } else {
-    lastUpdated = 'Unknown';
-  }
-
-  const rawDateSource =
-    source['raw date'] ??
-    (source as any).raw_date ??
-    (source as any).rawDate;
-
-  let rawDate: string | { $date: string } | undefined;
-  if (typeof rawDateSource === 'string') {
-    rawDate = rawDateSource;
-  } else if (
-    rawDateSource &&
-    typeof rawDateSource === 'object' &&
-    typeof (rawDateSource as any).$date === 'string'
-  ) {
-    rawDate = { $date: (rawDateSource as any).$date };
-  }
-
-  const neighbors = normalizeNeighbors(
-    (source as any).info_neighbors ??
-      (source as any).neighbors ??
-      (source as any).cdp_neighbors ??
-      (source as any).lldp_neighbors
-  );
-
-  const normalized: NetworkDevice = {
-    Mac: mac,
-    mac,
-    hostname,
-    interface: normalizeInterfaces(source.interface),
-    'last updated at': lastUpdated,
-  };
-
-  if (rawDate) {
-    normalized['raw date'] = rawDate;
-  }
-  if (neighbors.length) {
-    normalized.info_neighbors = neighbors;
-  }
-
-  return normalized;
-};
-
-const normalizeDeviceCollection = (input: unknown): NetworkDevice[] => {
-  if (!Array.isArray(input)) return [];
-  return input.map(normalizeDevice);
-};
-
-const requestDevices = async (): Promise<NetworkDevice[]> => {
-  console.log('[API] GET /devices/get_all - fetching latest devices');
-  const response = await fetch(`${API_BASE_URL}/devices/get_all`);
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log('[API] GET /devices/get_all - raw payload:', data);
-
-  const devicesData = normalizeDeviceCollection(data);
-  console.log(`[API] GET /devices/get_all - received ${devicesData.length} records`);
-  return devicesData;
-};
-
-const findDeviceByIdentifier = (collection: NetworkDevice[], identifier: string): NetworkDevice | null => {
-  const target = typeof identifier === 'string' ? identifier.trim().toLowerCase() : '';
-  if (!target) {
-    return null;
-  }
-
-  const matches = (value: unknown) => {
-    if (typeof value !== 'string') return false;
-    return value.trim().toLowerCase() === target;
-  };
-
-  return (
-    collection.find((device) => {
-      const macMatch = matches(device?.Mac) || matches((device as any)?.mac);
-      const hostnameMatch = matches(device?.hostname);
-      const interfaceMatch = Array.isArray(device?.interface)
-        ? device.interface.some((port: any) => matches(port?.ip_address))
-        : false;
-      return macMatch || hostnameMatch || interfaceMatch;
-    }) ?? null
-  );
-};
-
-const requestDeviceByIp = async (ip: string): Promise<NetworkDevice | null> => {
-  const sanitizedIp = typeof ip === 'string' ? ip.trim() : '';
-  if (!sanitizedIp) {
-    return null;
-  }
-
-  const url = `${API_BASE_URL}/devices/get_one_record?ip=${encodeURIComponent(sanitizedIp)}`;
-  console.log(`[API] GET /devices/get_one_record - fetching device ip=${sanitizedIp}`);
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    console.warn(`[API] GET /devices/get_one_record - response was not JSON for ip=${sanitizedIp}`);
-    return null;
-  }
-
-  console.log(`[API] GET /devices/get_one_record - raw payload for ip=${sanitizedIp}:`, payload);
-
-  if (typeof payload === 'boolean') {
-    console.log(`[API] GET /devices/get_one_record - boolean response for ip=${sanitizedIp}: ${payload}`);
-    return null;
-  }
-
-  let candidates: unknown[] = [];
-  if (Array.isArray(payload)) {
-    candidates = payload;
-  } else if (payload && typeof payload === 'object') {
-    const maybeRecord = payload as Record<string, unknown>;
-    const dataField = (maybeRecord as { data?: unknown }).data;
-    if (Array.isArray(dataField)) {
-      candidates = dataField as unknown[];
-    } else {
-      candidates = [maybeRecord];
-    }
-  }
-
-  if (!candidates.length) {
-    console.warn(`[API] GET /devices/get_one_record - empty payload for ip=${sanitizedIp}`);
-    return null;
-  }
-
-  const normalizedCandidates = normalizeDeviceCollection(candidates);
-  if (!normalizedCandidates.length) {
-    console.warn(`[API] GET /devices/get_one_record - unable to normalize payload for ip=${sanitizedIp}`);
-    return null;
-  }
-
-  const matched = findDeviceByIdentifier(normalizedCandidates, sanitizedIp);
-  return matched ?? normalizedCandidates[0] ?? null;
-};
-
-// Main App Component
-const NetworkDeviceMonitor: React.FC = () => {
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<NetworkDevice | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const AppContent: React.FC = () => {
+  // Stores the full list of devices returned by GET /devices/get_all.
+  const [devices, setDevices] = useState<DeviceRecord[]>([]);
+  // Stores the credential objects returned by GET /credentials/connection_details.
+  const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
+  // Search text typed in the header; we use it to filter the list in-memory.
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+  // Currently selected device for the DeviceDetailsModal.
+  const [selectedDevice, setSelectedDevice] = useState<DeviceRecord | null>(
+    null
+  );
+  // Controls whether the settings modal is visible.
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Loading + error states for the initial fetch.
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updatingIp, setUpdatingIp] = useState<string | null>(null);
-  const [credentialIps, setCredentialIps] = useState<Set<string>>(new Set());
-  const [isAddDeviceModalOpen, setAddDeviceModalOpen] = useState(false);
-  
-  // Theme (light/dark)
-  const getInitialTheme = (): 'light' | 'dark' => {
+  // Protocol preference for the Update button (default SNMP as requested).
+  const [protocol, setProtocol] = useState<ProtocolMethod>('snmp');
+
+  const { theme } = useTheme();
+
+  // Fetch devices and credentials at the same time when the app starts.
+  const reloadDevicesAndCredentials = useCallback(async () => {
+    const [deviceData, credentialData] = await Promise.all([
+      fetchAllDevices(),
+      fetchAllCredentials(),
+    ]);
+    setDevices(deviceData);
+    setCredentials(credentialData);
+  }, []);
+
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
-      if (saved === 'light' || saved === 'dark') return saved;
-    } catch {}
-    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-  };
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => getInitialTheme());
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('theme', theme);
-    } catch {}
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
-
-  const openAddDeviceModal = () => setAddDeviceModalOpen(true);
-  const closeAddDeviceModal = () => setAddDeviceModalOpen(false);
-
-  // Fetch data from backend API or use mock data
-  const fetchDevices = useCallback(async (): Promise<NetworkDevice[] | null> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const devicesData = await requestDevices();
-      if (devicesData.length === 0) {
-        console.log('No devices found in database');
-        setDevices([]);
-      } else {
-        setDevices(devicesData);
-      }
-      return devicesData;
+      await reloadDevicesAndCredentials();
     } catch (err) {
-      console.error('Error fetching devices:', err);
-      setDevices([]);
-      setError('Unable to load devices from API.');
-      return null;
+      setError(
+        err instanceof Error ? err.message : 'Failed to load initial data.'
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, []);
+  }, [reloadDevicesAndCredentials]);
 
-  // Fetch connection credentials IPs
-  const fetchCredentialIps = useCallback(async () => {
-    try {
-      console.log('[API] GET /credentials/connection_details - fetching credential IPs');
-      const res = await fetch(`${API_BASE_URL}/credentials/connection_details`);
-      if (!res.ok) return;
-      const data = await res.json();
-      console.log('[API] GET /credentials/connection_details - raw payload:', data);
-
-      const toIpList = (payload: unknown): string[] => {
-        if (Array.isArray(payload)) {
-          return payload
-            .map((cred: any) => (typeof cred?.ip === 'string' ? cred.ip.trim() : ''))
-            .filter((ip): ip is string => Boolean(ip));
-        }
-        if (Array.isArray((payload as any)?.details)) {
-          return (payload as any).details
-            .map((cred: any) => (typeof cred?.ip === 'string' ? cred.ip.trim() : ''))
-            .filter((ip: string) => Boolean(ip));
-        }
-        return [];
-      };
-
-      const ips = toIpList(data);
-      console.log(`[API] GET /credentials/connection_details - received ${ips.length} credential IP(s)`);
-      setCredentialIps(new Set(ips));
-    } catch {
-      // ignore, keep empty set
-    }
-  }, []);
-
-  // Load data from API on component mount 
   useEffect(() => {
-    fetchDevices();
-    fetchCredentialIps();
-  }, [fetchDevices, fetchCredentialIps]);
+    loadInitialData();
+  }, [loadInitialData]);
 
-  // Removed dynamic header height update effect as unnecessary
+  // Quick lookup by IP so components can easily grab credential info.
+  const credentialMap = useMemo(() => {
+    const map: Record<string, CredentialRecord> = {};
+    credentials.forEach((credential) => {
+      if (credential.ip) {
+        map[credential.ip] = credential;
+      }
+    });
+    return map;
+  }, [credentials]);
 
-  const handleDeviceClick = (device: NetworkDevice) => {
-    setSelectedDevice(device);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedDevice(null);
-  };
-
-  // Filter devices based on search term
-  const toLower = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v)).toLowerCase();
+  // Filtering happens entirely in memory – no extra backend calls.
   const filteredDevices = useMemo(() => {
-    const term = toLower(searchTerm);
-    if (term.length === 0) {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) {
       return devices;
     }
-    return devices.filter((device: any) => {
-      const hostname = toLower(device?.hostname);
-      const interfaces = Array.isArray(device?.interface) ? device.interface : [];
-      const hostMatch = hostname.includes(term);
-      const ipMatch = interfaces.some((port: any) => toLower(port?.ip_address).includes(term));
-      return hostMatch || ipMatch;
+
+    return devices.filter((device) => {
+      const hostnameMatch = device.hostname.toLowerCase().includes(term);
+      const ipMatch = device.primaryIp
+        ? device.primaryIp.toLowerCase().includes(term)
+        : false;
+      return hostnameMatch || ipMatch;
     });
   }, [devices, searchTerm]);
 
-  const hasDevices = devices.length > 0;
-  const showDeviceList = !loading && !error && hasDevices;
-  const showEmptyState = !loading && !error && !hasDevices;
-  const showSearchNoResults = !loading && !error && hasDevices && filteredDevices.length === 0;
+  // Sidebar counts update automatically whenever the devices array changes.
+  const sidebarCounts = useMemo(() => {
+    const counts = {
+      total: devices.length,
+      active: 0,
+      inactive: 0,
+      unauthorized: 0,
+    };
 
-  // Handle refresh button click
-  const handleRefresh = () => {
-    fetchDevices();
-  };
-
-  const handleAddDeviceSubmit = useCallback(
-    async (payload: AddDevicePayload) => {
-      const sanitizedPayload: AddDevicePayload = {
-        device_type: payload.device_type,
-        ip: payload.ip,
-        username: payload.username,
-        password: payload.password,
-        ...(payload.secret ? { secret: payload.secret } : {}),
-      };
-
-      console.log('[API] POST /credentials/add_device - submitting payload:', sanitizedPayload);
-      const response = await fetch(`${API_BASE_URL}/credentials/add_device`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sanitizedPayload),
-      });
-
-      let rawResponse: string | null = null;
-      try {
-        rawResponse = await response.clone().text();
-        if (rawResponse) {
-          console.log('[API] POST /credentials/add_device - response payload:', rawResponse);
-        }
-      } catch {
-        rawResponse = null;
+    devices.forEach((device) => {
+      const status = deriveDeviceStatus(device);
+      if (status === 'active') {
+        counts.active += 1;
+      } else if (status === 'inactive') {
+        counts.inactive += 1;
+      } else {
+        counts.unauthorized += 1;
       }
+    });
 
-      if (!response.ok) {
-        let errorMessage = `Failed to add device (status ${response.status})`;
-        if (rawResponse) {
-          try {
-            const parsed = JSON.parse(rawResponse);
-            if (typeof parsed === 'string' && parsed.trim()) {
-              errorMessage = parsed.trim();
-            } else if (parsed && typeof parsed === 'object') {
-              if (typeof (parsed as any).detail === 'string') {
-                errorMessage = (parsed as any).detail;
-              } else if (Array.isArray((parsed as any).detail) && (parsed as any).detail.length > 0) {
-                const firstDetail = (parsed as any).detail[0];
-                if (typeof firstDetail?.msg === 'string') {
-                  errorMessage = firstDetail.msg;
-                }
-              }
-            }
-          } catch {
-            errorMessage = rawResponse;
-          }
-        }
-        throw new Error(errorMessage);
+    return counts;
+  }, [devices]);
+
+  const handleDeviceRefresh = useCallback(
+    async (ip: string) => {
+      if (!ip) {
+        return;
       }
-
-      await fetchDevices();
-      await fetchCredentialIps();
-    },
-    [fetchCredentialIps, fetchDevices]
-  );
-
-  // Update a single device by IP
-  const handleUpdateDevice = async (ip: string) => {
-    const sanitizedIp = typeof ip === 'string' ? ip.trim() : '';
-    if (!sanitizedIp || sanitizedIp.toLowerCase() === 'no ip') {
-      console.warn('[API] POST /devices/refresh_one - skipping update, no valid IP provided');
-      return;
-    }
-
-    try {
-      setUpdatingIp(sanitizedIp);
-      const updateUrl = `${API_BASE_URL}/devices/refresh_one?ip=${encodeURIComponent(sanitizedIp)}`;
-      console.log(`[API] POST /devices/refresh_one - updating device ip=${sanitizedIp}`);
-      const updateResponse = await fetch(updateUrl, {
-        method: 'POST',
-      });
-      if (!updateResponse.ok) {
-        console.warn(
-          `[API] POST /devices/refresh_one - request failed with status ${updateResponse.status} for ip=${sanitizedIp}`
-        );
-        throw new Error(`HTTP error! status: ${updateResponse.status}`);
-      }
-
-      let updatePayload: unknown = null;
-      try {
-        updatePayload = await updateResponse.clone().json();
-        console.log(`[API] POST /devices/refresh_one - response payload for ip=${sanitizedIp}:`, updatePayload);
-      } catch {
-        console.log(`[API] POST /devices/refresh_one - no JSON response for ip=${sanitizedIp}`);
-      }
-
-      console.log(`[API] POST /devices/refresh_one - update triggered for ip=${sanitizedIp}, fetching updated record`);
-      const updatedDevice = await requestDeviceByIp(sanitizedIp);
       setError(null);
 
-      if (!updatedDevice) {
-        console.warn(`[API] GET /devices/get_one_record - no updated data returned for identifier "${sanitizedIp}"`);
+      // 1) Ask the backend to refresh the device using the current protocol.
+      try {
+        await refreshDeviceByIp(ip, protocol);
+      } catch (refreshError) {
+        setError(
+          refreshError instanceof Error
+            ? refreshError.message
+            : 'Device refresh failed.'
+        );
         return;
       }
 
-      setDevices((current) => {
-        const matched = findDeviceByIdentifier(current, sanitizedIp);
-        if (!matched) {
-          return [updatedDevice, ...current];
-        }
-        return current.map((device) => (device === matched ? updatedDevice : device));
-      });
+      // 2) Try to fetch just that device.
+      try {
+        const updatedDevice = await fetchDeviceByIp(ip);
+        if (updatedDevice) {
+          setDevices((previous) => {
+            const alreadyExists = previous.some(
+              (device) =>
+                device.primaryIp === ip || device.mac === updatedDevice.mac
+            );
 
-      setSelectedDevice((current) => {
-        if (!current) return current;
-        const sameMac = current.Mac && updatedDevice.Mac && current.Mac === updatedDevice.Mac;
-        const sameHostname = current.hostname && updatedDevice.hostname && current.hostname === updatedDevice.hostname;
-        return sameMac || sameHostname ? updatedDevice : current;
-      });
+            if (alreadyExists) {
+              return previous.map((device) =>
+                device.primaryIp === ip || device.mac === updatedDevice.mac
+                  ? updatedDevice
+                  : device
+              );
+            }
+
+            return [...previous, updatedDevice];
+          });
+          return;
+        }
+      } catch {
+        // If GET /devices/get_one_record fails we silently move on to the
+        // fallback where we reload all devices.
+      }
+
+      // 3) Fallback: reload the entire device list.
+      try {
+        const latestDevices = await fetchAllDevices();
+        setDevices(latestDevices);
+      } catch (fallbackError) {
+        setError(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : 'Unable to refresh device data.'
+        );
+      }
+    },
+    [protocol]
+  );
+
+  const handleDeviceAdded = useCallback(async () => {
+    setError(null);
+    try {
+      await reloadDevicesAndCredentials();
     } catch (err) {
-      console.error('Error updating device:', err);
-      console.log('[API] GET /devices/get_all - refetching after update failure');
-      await fetchDevices();
-    } finally {
-      setUpdatingIp(null);
+      setError(
+        err instanceof Error ? err.message : 'Unable to reload devices.'
+      );
     }
-  };
+  }, [reloadDevicesAndCredentials]);
+
+  const credentialForSelectedDevice = useMemo(() => {
+    if (!selectedDevice) {
+      return undefined;
+    }
+    if (selectedDevice.primaryIp) {
+      return credentialMap[selectedDevice.primaryIp];
+    }
+    return undefined;
+  }, [selectedDevice, credentialMap]);
 
   return (
-    <div className="app">
+    <div className={`app app--${theme}`}>
       <Header
-        loading={loading}
-        onRefresh={handleRefresh}
-        onAddDevice={openAddDeviceModal}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        theme={theme}
-        onToggleTheme={toggleTheme}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
+      <Sidebar counts={sidebarCounts} />
 
-      <div className="app-layout">
-        {!error && (
-          <Sidebar
+      <main className="main-content">
+        {isLoading && <div className="loading-state">Loading devices…</div>}
+        {error && <div className="error-state">{error}</div>}
+        {!isLoading && (
+          <DeviceList
             devices={filteredDevices}
-            loading={loading}
+            credentialMap={credentialMap}
+            protocol={protocol}
+            onSelectDevice={(device) => setSelectedDevice(device)}
+            onRefreshDevice={handleDeviceRefresh}
           />
         )}
+      </main>
 
-        <div className="main-content">
-          {error && (
-            <div className="status-panel api-error">
-              <h3>API unavailable</h3>
-              <p>{error}</p>
-              <button onClick={fetchDevices} className="retry-button">Try again</button>
-            </div>
-          )}
-
-          {loading && !error && (
-            <div className="loading-message">
-              <p>Loading devices...</p>
-            </div>
-          )}
-
-          {showEmptyState && (
-            <div className="status-panel empty-state">
-              <h3>No devices found</h3>
-              <p>We couldn’t load any devices from the API. Try refreshing to fetch the latest inventory.</p>
-              <button onClick={fetchDevices} className="secondary-action-button">Refresh</button>
-            </div>
-          )}
-
-          {showDeviceList && (
-            <DeviceList
-              devices={filteredDevices}
-              onDeviceClick={handleDeviceClick}
-              onUpdateDevice={handleUpdateDevice}
-              updatingIp={updatingIp}
-              credentialIps={credentialIps}
-            />
-          )}
-
-          {showSearchNoResults && (
-            <div className="no-results">
-              <p>No devices found matching your search.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AddDeviceModal
-        isOpen={isAddDeviceModalOpen}
-        onClose={closeAddDeviceModal}
-        onSubmit={handleAddDeviceSubmit}
+      <DeviceDetailsModal
+        device={selectedDevice}
+        credential={credentialForSelectedDevice}
+        onClose={() => setSelectedDevice(null)}
       />
-      <DeviceModal device={selectedDevice} isOpen={isModalOpen} onClose={closeModal} />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        protocol={protocol}
+        onProtocolChange={setProtocol}
+        onDeviceAdded={handleDeviceAdded}
+      />
     </div>
   );
 };
 
-export default NetworkDeviceMonitor;
+const App: React.FC = () => (
+  <ThemeProvider>
+    <AppContent />
+  </ThemeProvider>
+);
+
+export default App;

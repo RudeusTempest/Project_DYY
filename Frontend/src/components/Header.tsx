@@ -1,63 +1,52 @@
-import React, { forwardRef } from 'react';
-import Logo from './Logo';
+import React from 'react';
+import './Header.css';
+import logoLeft from '../logos/erez-logo.jpg';
+import logoRight from '../logos/maof-logo.jpg';
 
-type HeaderProps = {
-  loading: boolean;
-  onRefresh: () => void;
-  onAddDevice: () => void;
+interface HeaderProps {
   searchTerm: string;
-  onSearchChange: (term: string) => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
-};
+  onSearchChange: (value: string) => void;
+  onOpenSettings: () => void;
+}
 
-const Header = forwardRef<HTMLDivElement, HeaderProps>(
-  ({ loading, onRefresh, onAddDevice, searchTerm, onSearchChange, theme, onToggleTheme }, ref) => {
-    return (
-      <div className="app-header" ref={ref}>
-        <div className="header-container">
-          <div className="header-section">
-            <Logo />
-            <h1>Network Device Monitor</h1>
-            {!loading && (
-              <div className="header-search">
-                <input
-                  type="text"
-                  placeholder="Search devices..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                />
-              </div>
-            )}
-            <button
-              onClick={onToggleTheme}
-              className="theme-toggle"
-              aria-label="Toggle theme"
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              type="button"
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-            <button
-              onClick={onAddDevice}
-              className="add-device-button"
-              type="button"
-            >
-              Add Device
-            </button>
-            <button
-              onClick={onRefresh}
-              className="refresh-button"
-              disabled={loading}
-              type="button"
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
+// The header stays fixed at the top and exposes the global actions (search and
+// settings). Keeping the component small and explicit helps beginners see which
+// props flow in from the parent App component.
+const Header: React.FC<HeaderProps> = ({
+  searchTerm,
+  onSearchChange,
+  onOpenSettings,
+}) => {
+  return (
+    <header className="header">
+      <div className="header__branding">
+        <img
+          src={logoLeft}
+          alt="Company logo left"
+          className="header__logo"
+        />
+        <span className="header__title">Network Device Monitor</span>
+        <img
+          src={logoRight}
+          alt="Company logo right"
+          className="header__logo"
+        />
       </div>
-    );
-  }
-);
+
+      <div className="header__actions">
+        <input
+          className="header__search"
+          type="text"
+          placeholder="Search by hostname or IP..."
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+        <button className="header__settings-button" onClick={onOpenSettings}>
+          Settings
+        </button>
+      </div>
+    </header>
+  );
+};
 
 export default Header;
