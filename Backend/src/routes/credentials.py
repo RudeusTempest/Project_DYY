@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.models.device import device_cred
 from src.controllers.credentials import CredentialsController
+from src.controllers.devices import DeviceController
 from typing import List, Dict, Any
 
 
@@ -11,6 +12,7 @@ router = APIRouter()
 async def add_device(cred: device_cred) -> Dict[str, bool]:
     try:
         CredentialsController.add_device_cred(cred)
+        DeviceController.refresh_by_ip(cred.ip, "snmp")
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add device: {str(e)}")
