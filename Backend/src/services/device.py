@@ -165,17 +165,17 @@ class DeviceService:
             cred = CredentialsService.get_one_cred(ip)
             if not cred:
                 print(f"No credentials found for IP {ip}")
-                return None
+                return False
             if method == "snmp":
                 return await DeviceService.update_device_info_snmp(cred)
             elif method == "cli":
                 return await DeviceService.update_device_info_cli(cred)
             else:
                 print(f"Unknown method: {method}")
-                return None
+                return False
         except Exception as e:
             print(f"Error refreshing device {ip}: {e}")
-            return None
+            return False
 
 
     @staticmethod
