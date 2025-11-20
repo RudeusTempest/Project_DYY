@@ -11,19 +11,15 @@ class ConnectionService:
 
     @staticmethod
     def connect(device_cred: dict) -> Optional[Any]:
+        print(device_cred)
         try:
             # Connecting to the router
             net_connect = ConnectHandler(**device_cred)
-            print("Connection successful")
+            
+            print("Connection successful", device_cred.get('ip', 'unknown'))
             return net_connect
-        except NetmikoAuthenticationException as e:
-            print(f"Authentication failed for {device_cred.get('ip', 'unknown')}: {e}")
-            return None
-        except NetmikoTimeoutException as e:
-            print(f"Connection timeout for {device_cred.get('ip', 'unknown')}: {e}")
-            return None
-        except Exception as e:
-            print(f"Connection failed for {device_cred.get('ip', 'unknown')}: {e}")
+        except:
+            print(f"Failed to connect to device {device_cred.get('ip', 'unknown')}")
             return None
 
 

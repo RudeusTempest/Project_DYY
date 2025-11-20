@@ -38,3 +38,8 @@ class DeviceController:
     @staticmethod
     async def periodic_refresh_cli(device_interval: float) -> None:
         await DeviceService.periodic_refresh_cli(device_interval)
+
+
+    @staticmethod
+    async def update_mbps_loop_cli(mbps_interval: float) -> None:
+        await DeviceService.update_mbps_loop_cli(mbps_interval)
