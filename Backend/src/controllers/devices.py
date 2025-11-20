@@ -1,7 +1,7 @@
 from src.services.device import DeviceService
 from src.repositories.devices import DevicesRepo
 from typing import Optional, List, Dict, Any
-
+import asyncio
 
 class DeviceController:
 
@@ -28,7 +28,8 @@ class DeviceController:
     @staticmethod
     async def update_mbps_loop_snmp(mbps_interval: float) -> None:
         while True:
-            await DeviceService.update_mbps_snmp(mbps_interval)
+            await DeviceService.update_mbps_snmp()
+            await asyncio.sleep(mbps_interval)
     
              
 
