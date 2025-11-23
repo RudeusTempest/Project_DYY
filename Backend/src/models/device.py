@@ -8,5 +8,5 @@ class device_cred(BaseModel):
     ip: str = Field(..., description="IP address of the device")
     username: str = Field(..., description="Username for authentication")
     password: str = Field(..., description="Password for authentication")
-    secret: str = Field(..., description="Enable secret (if applicable)")
+    secret: Optional[str] = Field(None, description="Enable secret (if applicable)")
     snmp_password: Optional[str] = Field(None, description="SNMP community string for SNMP operations")

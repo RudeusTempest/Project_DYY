@@ -7,7 +7,7 @@ export interface CredentialRecord {
   device_type: string;
   username: string;
   password: string;
-  secret: string;
+  secret?: string;
   ip: string;
   snmp_password?: string;
 }
@@ -17,7 +17,8 @@ export interface AddCredentialPayload {
   ip: string;
   username: string;
   password: string;
-  secret: string;
+  secret?: string;
+  snmp_password?: string;
 }
 
 export const fetchAllCredentials = async (): Promise<CredentialRecord[]> => {

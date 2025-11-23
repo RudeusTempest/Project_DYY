@@ -79,7 +79,24 @@ Project_DYY/
 
 - `GET /` - Returns all network devices from the database
 - `GET /connection_details` - Returns device connection details
-- `POST /add_device` - Adds a new device to the database
+- `POST /add_device` - Adds a new device to the database (supports optional `secret` and `snmp_password` fields)
+
+### Add Device Payload
+
+When onboarding a device via `POST /credentials/add_device`, send a JSON body containing:
+
+```json
+{
+  "device_type": "cisco_ios",
+  "ip": "192.168.1.10",
+  "username": "admin",
+  "password": "P@ssw0rd",
+  "secret": "optional enable password",
+  "snmp_password": "optional community string"
+}
+```
+
+The backend treats `secret` and `snmp_password` as optional—omit these fields if the device does not require them.
 
 
 ## Data Format

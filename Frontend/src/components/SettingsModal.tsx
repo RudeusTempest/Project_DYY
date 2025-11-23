@@ -12,12 +12,22 @@ interface SettingsModalProps {
   onDeviceAdded: () => Promise<void> | void;
 }
 
-const initialFormState: AddCredentialPayload = {
+type CredentialFormState = {
+  device_type: string;
+  ip: string;
+  username: string;
+  password: string;
+  secret: string;
+  snmp_password: string;
+};
+
+const initialFormState: CredentialFormState = {
   device_type: '',
   ip: '',
   username: '',
   password: '',
   secret: '',
+  snmp_password: '',
 };
 
 // Modal that groups together app-wide settings: theme toggle, preferred update
@@ -31,7 +41,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeviceAdded,
 }) => {
   const { theme, toggleTheme } = useTheme();
-  const [formState, setFormState] = useState(initialFormState);
+  const [formState, setFormState] = useState<CredentialFormState>(initialFormState);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -51,7 +61,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setIsSaving(true);
     setMessage(null);
     try {
-      await addCredential(formState);
+      const payload: AddCredentialPayload = {
+        device_type: formState.device_type,
+        ip: formState.ip,
+        username: formState.username,
+        password: formState.password,
+      };
+
+      if (formState.secret.trim()) {
+        payload.secret = formState.secret;
+      }
+      if (formState.snmp_password.trim()) {
+        payload.snmp_password = formState.snmp_password;
+      }
+
+      await addCredential(payload);
       setFormState(initialFormState);
       await onDeviceAdded();
       onClose();
@@ -165,13 +189,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </label>
             <label>
-              Secret
+              Secret (optional)
               <input
                 type="password"
                 name="secret"
                 value={formState.secret}
                 onChange={handleInputChange}
-                required
+              />
+            </label>
+            <label>
+              SNMP Password (optional)
+              <input
+                type="password"
+                name="snmp_password"
+                value={formState.snmp_password}
+                onChange={handleInputChange}
               />
             </label>
             <button type="submit" disabled={isSaving}>
