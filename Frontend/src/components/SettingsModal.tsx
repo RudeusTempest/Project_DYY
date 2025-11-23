@@ -1,94 +1,33 @@
-import React, { useState } from 'react';
-import './SettingsModal.css';
+import React from 'react';
+import './Modal.css';
 import { ProtocolMethod } from '../api/devices';
-import { addCredential, AddCredentialPayload } from '../api/credentials';
 import { useTheme } from '../theme/ThemeContext';
+import type { DeviceViewMode } from './DeviceList';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   protocol: ProtocolMethod;
   onProtocolChange: (method: ProtocolMethod) => void;
-  onDeviceAdded: () => Promise<void> | void;
+  viewMode: DeviceViewMode;
+  onViewModeChange: (mode: DeviceViewMode) => void;
 }
 
-type CredentialFormState = {
-  device_type: string;
-  ip: string;
-  username: string;
-  password: string;
-  secret: string;
-  snmp_password: string;
-};
-
-const initialFormState: CredentialFormState = {
-  device_type: '',
-  ip: '',
-  username: '',
-  password: '',
-  secret: '',
-  snmp_password: '',
-};
-
 // Modal that groups together app-wide settings: theme toggle, preferred update
-// protocol, and the form for onboarding new devices (calls
-// /credentials/add_device).
+// protocol.
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   protocol,
   onProtocolChange,
-  onDeviceAdded,
+  viewMode,
+  onViewModeChange,
 }) => {
   const { theme, toggleTheme } = useTheme();
-  const [formState, setFormState] = useState<CredentialFormState>(initialFormState);
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   if (!isOpen) {
     return null;
   }
-
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      const payload: AddCredentialPayload = {
-        device_type: formState.device_type,
-        ip: formState.ip,
-        username: formState.username,
-        password: formState.password,
-      };
-
-      if (formState.secret.trim()) {
-        payload.secret = formState.secret;
-      }
-      if (formState.snmp_password.trim()) {
-        payload.snmp_password = formState.snmp_password;
-      }
-
-      await addCredential(payload);
-      setFormState(initialFormState);
-      await onDeviceAdded();
-      onClose();
-    } catch (error) {
-      if (error instanceof Error) {
-        setMessage(error.message);
-      } else {
-        setMessage('Failed to add device.');
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -99,14 +38,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="settings-overlay" onClick={handleOverlayClick}>
-      <div className="settings-modal">
-        <button className="settings-close" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal">
+        <button className="modal-close" onClick={onClose}>
           ×
         </button>
         <h2>Settings</h2>
 
-        <section className="settings-section">
+        <section className="modal-section">
           <h3>Theme</h3>
           <p>
             Toggle between light and dark mode. The selected mode is saved in
@@ -122,7 +61,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </label>
         </section>
 
-        <section className="settings-section">
+        <section className="modal-section">
           <h3>Single Device Update Protocol</h3>
           <p>Choose which protocol the Update button should use.</p>
           <label className="protocol-option">
@@ -146,71 +85,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             CLI
           </label>
         </section>
-
-        <section className="settings-section">
-          <h3>Add Device</h3>
-          <p>Fill the credentials below and submit to call /credentials/add_device.</p>
-          <form className="settings-form" onSubmit={handleSubmit}>
-            <label>
-              Device Type
-              <input
-                name="device_type"
-                value={formState.device_type}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              IP Address
-              <input
-                name="ip"
-                value={formState.ip}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              Username
-              <input
-                name="username"
-                value={formState.username}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                name="password"
-                value={formState.password}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              Secret (optional)
-              <input
-                type="password"
-                name="secret"
-                value={formState.secret}
-                onChange={handleInputChange}
-              />
-            </label>
-            <label>
-              SNMP Password (optional)
-              <input
-                type="password"
-                name="snmp_password"
-                value={formState.snmp_password}
-                onChange={handleInputChange}
-              />
-            </label>
-            <button type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving…' : 'Add Device'}
-            </button>
-            {message && <p className="settings-message">{message}</p>}
-          </form>
+        <section className="modal-section">
+          <h3>Device List Layout</h3>
+          <p>Switch between gallery cards and a simple list.</p>
+          <label className="protocol-option">
+            <input
+              type="radio"
+              name="viewMode"
+              value="gallery"
+              checked={viewMode === 'gallery'}
+              onChange={() => onViewModeChange('gallery')}
+            />
+            Gallery
+          </label>
+          <label className="protocol-option">
+            <input
+              type="radio"
+              name="viewMode"
+              value="list"
+              checked={viewMode === 'list'}
+              onChange={() => onViewModeChange('list')}
+            />
+            List
+          </label>
         </section>
       </div>
     </div>

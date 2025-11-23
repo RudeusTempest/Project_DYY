@@ -7,6 +7,7 @@ interface HeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onOpenSettings: () => void;
+  onOpenAddDevice: () => void;
 }
 
 // The header stays fixed at the top and exposes the global actions (search and
@@ -16,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({
   searchTerm,
   onSearchChange,
   onOpenSettings,
+  onOpenAddDevice,
 }) => {
   return (
     <header className="header">
@@ -41,6 +43,9 @@ const Header: React.FC<HeaderProps> = ({
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
         />
+        <button className="header__add-device-button" onClick={onOpenAddDevice}>
+          Add Device
+        </button>
         <button className="header__settings-button" onClick={onOpenSettings}>
           Settings
         </button>

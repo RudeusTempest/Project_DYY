@@ -8,12 +8,15 @@ import {
 } from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
 
+export type DeviceViewMode = 'gallery' | 'list';
+
 interface DeviceListProps {
   devices: DeviceRecord[];
   credentialMap: Record<string, CredentialRecord>;
   protocol: ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
+  viewMode: DeviceViewMode;
 }
 
 // The device list simply handles layout and mapping over DeviceCard components.
@@ -25,6 +28,7 @@ const DeviceList: React.FC<DeviceListProps> = ({
   protocol,
   onSelectDevice,
   onRefreshDevice,
+  viewMode,
 }) => {
   const renderContent = () => {
     if (devices.length === 0) {
@@ -35,8 +39,11 @@ const DeviceList: React.FC<DeviceListProps> = ({
       );
     }
 
+    const containerClass =
+      viewMode === 'gallery' ? 'device-list__grid' : 'device-list__list';
+
     return (
-      <div className="device-list__grid">
+      <div className={containerClass}>
         {devices.map((device) => {
           const relatedCredential = device.primaryIp
             ? credentialMap[device.primaryIp]

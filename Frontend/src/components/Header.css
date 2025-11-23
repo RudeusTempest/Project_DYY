@@ -52,6 +52,7 @@
   color: var(--muted-text);
 }
 
+.header__add-device-button,
 .header__settings-button {
   padding: 0.45rem 1rem;
   border-radius: 6px;
@@ -63,6 +64,7 @@
   transition: opacity 0.2s ease;
 }
 
+.header__add-device-button:hover,
 .header__settings-button:hover {
   opacity: 0.85;
 }

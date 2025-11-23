@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import DeviceList from './components/DeviceList';
+import DeviceList, { type DeviceViewMode } from './components/DeviceList';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
 import SettingsModal from './components/SettingsModal';
+import AddDeviceModal from './components/AddDeviceModal';
 import {
   DeviceRecord,
   fetchAllDevices,
@@ -32,11 +33,15 @@ const AppContent: React.FC = () => {
   );
   // Controls whether the settings modal is visible.
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Controls the add-device modal visibility.
+  const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
   // Loading + error states for the initial fetch.
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Protocol preference for the Update button (default SNMP as requested).
   const [protocol, setProtocol] = useState<ProtocolMethod>('snmp');
+  // Preferred view for device list (gallery default).
+  const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
 
   const { theme } = useTheme();
 
@@ -206,6 +211,7 @@ const AppContent: React.FC = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenAddDevice={() => setIsAddDeviceOpen(true)}
       />
       <Sidebar counts={sidebarCounts} />
 
@@ -219,6 +225,7 @@ const AppContent: React.FC = () => {
             protocol={protocol}
             onSelectDevice={(device) => setSelectedDevice(device)}
             onRefreshDevice={handleDeviceRefresh}
+            viewMode={viewMode}
           />
         )}
       </main>
@@ -234,6 +241,12 @@ const AppContent: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         protocol={protocol}
         onProtocolChange={setProtocol}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+      <AddDeviceModal
+        isOpen={isAddDeviceOpen}
+        onClose={() => setIsAddDeviceOpen(false)}
         onDeviceAdded={handleDeviceAdded}
       />
     </div>
