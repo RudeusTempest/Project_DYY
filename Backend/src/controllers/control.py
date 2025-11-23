@@ -24,7 +24,7 @@ async def main_cli() -> None:
     try:
         while True:
             await asyncio.gather(
-                DeviceController.periodic_refresh_cli(device_interval), 
+                DeviceController.periodic_refresh_cli(device_interval),
                 DeviceController.update_mbps_loop_cli(mbps_interval)
             )
     except Exception as e:

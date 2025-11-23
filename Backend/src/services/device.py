@@ -321,7 +321,6 @@ class DeviceService:
         try:
             connection = ConnectionService.connect(cred)
             if not connection:
-                print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
                 return None
             
             if "cisco" in cred["device_type"]:

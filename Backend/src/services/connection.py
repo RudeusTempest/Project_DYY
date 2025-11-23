@@ -11,7 +11,7 @@ class ConnectionService:
 
     @staticmethod
     def connect(device_cred: dict) -> Optional[Any]:
-        print(device_cred)
+        # print(device_cred)
         try:
             # Connecting to the router
             net_connect = ConnectHandler(**device_cred)
@@ -287,7 +287,7 @@ class ConnectionService:
         try:
             if device_type == "cisco_ios":
                 # Enter enable mode
-                # net_connect.enable()
+                net_connect.enable()
 
                 # Get command outputs
                 hostname_output = net_connect.send_command("show running-config | include hostname")
