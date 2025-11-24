@@ -15,7 +15,7 @@ interface DeviceListProps {
   credentialMap: Record<string, CredentialRecord>;
   protocol: ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
-  onRefreshDevice: (ip: string) => Promise<void> | void;
+  onRefreshDevice: (ip: string, method?: ProtocolMethod) => Promise<void> | void;
   viewMode: DeviceViewMode;
 }
 

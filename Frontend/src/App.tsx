@@ -124,15 +124,17 @@ const AppContent: React.FC = () => {
   }, [devices]);
 
   const handleDeviceRefresh = useCallback(
-    async (ip: string) => {
+    async (ip: string, method?: ProtocolMethod) => {
       if (!ip) {
         return;
       }
       setError(null);
 
+      const chosenProtocol = method ?? protocol;
+
       // 1) Ask the backend to refresh the device using the current protocol.
       try {
-        await refreshDeviceByIp(ip, protocol);
+        await refreshDeviceByIp(ip, chosenProtocol);
       } catch (refreshError) {
         setError(
           refreshError instanceof Error

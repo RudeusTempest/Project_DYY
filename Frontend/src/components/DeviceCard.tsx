@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './DeviceCard.css';
 import { DeviceRecord, DeviceStatus, ProtocolMethod } from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
@@ -9,7 +9,7 @@ interface DeviceCardProps {
   status: DeviceStatus;
   protocol: ProtocolMethod;
   onSelect: (device: DeviceRecord) => void;
-  onRefresh: (ip: string) => Promise<void> | void;
+  onRefresh: (ip: string, method?: ProtocolMethod) => Promise<void> | void;
 }
 
 // Shows the main snapshot for a single device. Clicking anywhere (except the
@@ -28,6 +28,12 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
   const upInterfaces = device.interfaces.filter((iface) =>
     iface.status?.toLowerCase?.().includes('up')
   ).length;
+  const [updateMethod, setUpdateMethod] = useState<ProtocolMethod>(protocol);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    setUpdateMethod(protocol);
+  }, [protocol]);
 
   const handleRefreshClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     // Prevent the click from bubbling up so it does not open the modal.
@@ -35,7 +41,24 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
     if (!deviceIp) {
       return;
     }
-    onRefresh(deviceIp);
+    onRefresh(deviceIp, updateMethod);
+    setIsSettingsOpen(false);
+  };
+
+  const handleSettingsToggle = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+    setIsSettingsOpen((previous) => !previous);
+  };
+
+  const handleMethodSelect = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    method: ProtocolMethod
+  ) => {
+    event.stopPropagation();
+    setUpdateMethod(method);
+    setIsSettingsOpen(false);
   };
 
   return (
@@ -52,11 +75,49 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
             )}
           </p>
         </div>
-        <span className={`device-card__status device-card__status--${status}`}>
-          {status === 'active' && 'Active'}
-          {status === 'inactive' && 'Inactive'}
-          {status === 'unauthorized' && 'Unauthorized'}
-        </span>
+        <div className="device-card__header-actions">
+          <span
+            className={`device-card__status device-card__status--${status}`}
+          >
+            {status === 'active' && 'Active'}
+            {status === 'inactive' && 'Inactive'}
+            {status === 'unauthorized' && 'Unauthorized'}
+          </span>
+          <div className="device-card__settings" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="device-card__settings-button"
+              onClick={handleSettingsToggle}
+              aria-expanded={isSettingsOpen}
+              aria-haspopup="true"
+            >
+              Settings
+            </button>
+            {isSettingsOpen && (
+              <div className="device-card__settings-menu">
+                <p className="device-card__settings-title">Update via</p>
+                <button
+                  type="button"
+                  className={`device-card__settings-option${
+                    updateMethod === 'snmp' ? ' is-active' : ''
+                  }`}
+                  onClick={(event) => handleMethodSelect(event, 'snmp')}
+                >
+                  SNMP
+                </button>
+                <button
+                  type="button"
+                  className={`device-card__settings-option${
+                    updateMethod === 'cli' ? ' is-active' : ''
+                  }`}
+                  onClick={(event) => handleMethodSelect(event, 'cli')}
+                >
+                  CLI
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="device-card__details">
@@ -79,7 +140,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
         disabled={!deviceIp}
         onClick={handleRefreshClick}
       >
-        Update ({protocol.toUpperCase()})
+        Update ({updateMethod.toUpperCase()})
       </button>
     </div>
   );

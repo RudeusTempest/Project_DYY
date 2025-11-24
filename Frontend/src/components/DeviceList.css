@@ -30,6 +30,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  justify-content: flex-start;
 }
 
 .device-list__list .device-card__header > div {
@@ -44,6 +45,10 @@
 
 .device-list__list .device-card__ip {
   margin: 0;
+}
+
+.device-list__list .device-card__header-actions {
+  gap: 0.35rem;
 }
 
 .device-list__list .device-card__details {
