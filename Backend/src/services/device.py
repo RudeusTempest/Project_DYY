@@ -176,7 +176,7 @@ class DeviceService:
 
 
     @staticmethod
-    async def update_mbps_snmp(mbps_interval: float) -> None:
+    async def update_mbps_snmp() -> None:
         try:
             ip_and_snmp_list = CredentialsService.get_all_ip_and_snmp()
             interface_dicts_list = DevicesRepo.get_interface_data()
@@ -208,7 +208,6 @@ class DeviceService:
                     
                             DevicesRepo.update_mbps(interface_data["ip_address"], interface_data["mbps_received"], interface_data["mbps_sent"])
                             print(f"Updated Mbps for {interface_data.get('ip_address')}")
-                            await asyncio.sleep(mbps_interval)
         except Exception as e:
             print(f"Error updating Mbps SNMP: {e}")
 

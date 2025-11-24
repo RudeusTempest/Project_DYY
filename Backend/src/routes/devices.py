@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.controllers.devices import DeviceController
 from typing import List, Dict, Any
+import asyncio
 
 
 router = APIRouter()
@@ -39,3 +40,12 @@ async def refresh_by_ip(ip: str, method: str = "snmp") -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to refresh device: {str(e)}")
 
+
+@router.put("/start_program")
+async def start_program(method: str = "snmp") -> None:
+    if method == "snmp":
+        asyncio.run((DeviceController.main_snmp()))
+
+    if method == "cli":
+        asyncio.run((DeviceController.main_cli()))
+        
