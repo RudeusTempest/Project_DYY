@@ -27,11 +27,47 @@
 
 .device-list__list .device-card__header {
   flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.device-list__list .device-card__header > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.device-list__list .device-card__name {
+  margin: 0;
+}
+
+.device-list__list .device-card__ip {
+  margin: 0;
 }
 
 .device-list__list .device-card__details {
-  flex: 1 1 260px;
-  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  flex: 1 1 360px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.device-list__list .device-card__details div {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.device-list__list .device-card__details strong,
+.device-list__list .device-card__details span {
+  display: inline;
+  font-size: 0.95rem;
+}
+
+.device-list__list .device-card__details strong {
+  font-size: 1rem;
 }
 
 .device-list__list .device-card__update-button {
