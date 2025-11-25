@@ -62,14 +62,14 @@ const AppContent: React.FC = () => {
         return;
       }
 
-      const [deviceData, credentialData] = await Promise.all([
-        fetchAllDevices().catch(() => null),
-        fetchAllCredentials().catch(() => null),
-      ]);
+    const [deviceData, credentialData] = await Promise.all([
+      fetchAllDevices().catch(() => null),
+      fetchAllCredentials().catch(() => null),
+    ]);
 
-      const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
-      const hasCredentials =
-        Array.isArray(credentialData) && credentialData.length > 0;
+    const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
+    const hasCredentials =
+      Array.isArray(credentialData) && credentialData.length > 0;
 
       if (hasDevices && hasCredentials) {
         setDevices(deviceData);
