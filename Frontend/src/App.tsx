@@ -12,6 +12,7 @@ import {
   fetchDeviceByIp,
   refreshDeviceByIp,
   deriveDeviceStatus,
+  type DeviceStatus,
   ProtocolMethod,
 } from './api/devices';
 import {
@@ -45,6 +46,8 @@ const AppContent: React.FC = () => {
   const [protocol, setProtocol] = useState<ProtocolMethod>('snmp');
   // Preferred view for device list (gallery default).
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
+  // Current sidebar status filter; "all" shows every device.
+  const [statusFilter, setStatusFilter] = useState<DeviceStatus | 'all'>('all');
 
   const { theme } = useTheme();
 
@@ -119,18 +122,23 @@ const AppContent: React.FC = () => {
   // Filtering happens entirely in memory – no extra backend calls.
   const filteredDevices = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
-    if (!term) {
-      return devices;
-    }
 
     return devices.filter((device) => {
+      if (statusFilter !== 'all' && deriveDeviceStatus(device) !== statusFilter) {
+        return false;
+      }
+
+      if (!term) {
+        return true;
+      }
+
       const hostnameMatch = device.hostname.toLowerCase().includes(term);
       const ipMatch = device.primaryIp
         ? device.primaryIp.toLowerCase().includes(term)
         : false;
       return hostnameMatch || ipMatch;
     });
-  }, [devices, searchTerm]);
+  }, [devices, searchTerm, statusFilter]);
 
   // Sidebar counts update automatically whenever the devices array changes.
   const sidebarCounts = useMemo(() => {
@@ -154,6 +162,13 @@ const AppContent: React.FC = () => {
 
     return counts;
   }, [devices]);
+
+  const handleStatusFilterChange = useCallback(
+    (status: DeviceStatus | 'all') => {
+      setStatusFilter((current) => (current === status ? 'all' : status));
+    },
+    []
+  );
 
   const handleDeviceRefresh = useCallback(
     async (ip: string) => {
@@ -257,7 +272,11 @@ const AppContent: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAddDevice={() => setIsAddDeviceOpen(true)}
       />
-      <Sidebar counts={sidebarCounts} />
+      <Sidebar
+        counts={sidebarCounts}
+        selectedStatus={statusFilter}
+        onSelectStatus={handleStatusFilterChange}
+      />
 
       <main className="main-content">
         {isLoading && <div className="loading-state">Loading devices…</div>}

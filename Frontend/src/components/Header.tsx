@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
-import logoLeft from '../logos/erez-logo.jpg';
-import logoRight from '../logos/maof-logo.jpg';
+import logoLeft from '../logos/erez-logo.svg';
+import logoRight from '../logos/maof-logo.svg';
 
 interface HeaderProps {
   searchTerm: string;
