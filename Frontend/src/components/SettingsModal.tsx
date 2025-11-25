@@ -11,6 +11,8 @@ interface SettingsModalProps {
   onProtocolChange: (method: ProtocolMethod) => void;
   viewMode: DeviceViewMode;
   onViewModeChange: (mode: DeviceViewMode) => void;
+  useMockData: boolean;
+  onUseMockDataChange: (enabled: boolean) => void;
 }
 
 // Modal that groups together app-wide settings: theme toggle, preferred update
@@ -22,6 +24,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onProtocolChange,
   viewMode,
   onViewModeChange,
+  useMockData,
+  onUseMockDataChange,
 }) => {
   const { theme, toggleTheme } = useTheme();
 
@@ -107,6 +111,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={() => onViewModeChange('list')}
             />
             List
+          </label>
+        </section>
+        <section className="modal-section">
+          <h3>Data Source</h3>
+          <p>Show live API results or the bundled mock dataset.</p>
+          <label className="protocol-option">
+            <input
+              type="radio"
+              name="dataSource"
+              value="api"
+              checked={!useMockData}
+              onChange={() => onUseMockDataChange(false)}
+            />
+            API (http://localhost:8000)
+          </label>
+          <label className="protocol-option">
+            <input
+              type="radio"
+              name="dataSource"
+              value="mock"
+              checked={useMockData}
+              onChange={() => onUseMockDataChange(true)}
+            />
+            Mock data (local)
           </label>
         </section>
       </div>

@@ -18,6 +18,7 @@ import {
   CredentialRecord,
   fetchAllCredentials,
 } from './api/credentials';
+import { mockDevices, mockCredentials } from './mockData';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 
 const AppContent: React.FC = () => {
@@ -25,6 +26,8 @@ const AppContent: React.FC = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   // Stores the credential objects returned by GET /credentials/connection_details.
   const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
+  // When true, the UI shows bundled mock data instead of hitting the backend.
+  const [useMockData, setUseMockData] = useState(false);
   // Search text typed in the header; we use it to filter the list in-memory.
   const [searchTerm, setSearchTerm] = useState('');
   // Currently selected device for the DeviceDetailsModal.
@@ -45,15 +48,44 @@ const AppContent: React.FC = () => {
 
   const { theme } = useTheme();
 
-  // Fetch devices and credentials at the same time when the app starts.
-  const reloadDevicesAndCredentials = useCallback(async () => {
-    const [deviceData, credentialData] = await Promise.all([
-      fetchAllDevices(),
-      fetchAllCredentials(),
-    ]);
-    setDevices(deviceData);
-    setCredentials(credentialData);
+  const applyMockData = useCallback(() => {
+    setDevices(mockDevices);
+    setCredentials(mockCredentials);
   }, []);
+
+  // Fetch devices and credentials at the same time when the app starts.
+  const reloadDevicesAndCredentials = useCallback(
+    async (forceMock = useMockData) => {
+      if (forceMock) {
+        applyMockData();
+        setError('Showing mock data (backend calls disabled).');
+        return;
+      }
+
+      const [deviceData, credentialData] = await Promise.all([
+        fetchAllDevices().catch(() => null),
+        fetchAllCredentials().catch(() => null),
+      ]);
+
+      const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
+      const hasCredentials =
+        Array.isArray(credentialData) && credentialData.length > 0;
+
+      if (hasDevices && hasCredentials) {
+        setDevices(deviceData);
+        setCredentials(credentialData);
+        setError(null);
+        return;
+      }
+
+      applyMockData();
+      setUseMockData(true);
+      setError(
+        'Using mock data because the API is unavailable or returned no records.'
+      );
+    },
+    [useMockData, applyMockData]
+  );
 
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -124,17 +156,19 @@ const AppContent: React.FC = () => {
   }, [devices]);
 
   const handleDeviceRefresh = useCallback(
-    async (ip: string, method?: ProtocolMethod) => {
+    async (ip: string) => {
       if (!ip) {
+        return;
+      }
+      if (useMockData) {
+        setError('Refresh is disabled while showing mock data.');
         return;
       }
       setError(null);
 
-      const chosenProtocol = method ?? protocol;
-
       // 1) Ask the backend to refresh the device using the current protocol.
       try {
-        await refreshDeviceByIp(ip, chosenProtocol);
+        await refreshDeviceByIp(ip, protocol);
       } catch (refreshError) {
         setError(
           refreshError instanceof Error
@@ -183,7 +217,7 @@ const AppContent: React.FC = () => {
         );
       }
     },
-    [protocol]
+    [protocol, useMockData]
   );
 
   const handleDeviceAdded = useCallback(async () => {
@@ -206,6 +240,14 @@ const AppContent: React.FC = () => {
     }
     return undefined;
   }, [selectedDevice, credentialMap]);
+
+  const handleMockToggle = useCallback(
+    async (enabled: boolean) => {
+      setUseMockData(enabled);
+      await reloadDevicesAndCredentials(enabled);
+    },
+    [reloadDevicesAndCredentials]
+  );
 
   return (
     <div className={`app app--${theme}`}>
@@ -245,6 +287,8 @@ const AppContent: React.FC = () => {
         onProtocolChange={setProtocol}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        useMockData={useMockData}
+        onUseMockDataChange={handleMockToggle}
       />
       <AddDeviceModal
         isOpen={isAddDeviceOpen}
