@@ -1,7 +1,38 @@
 import { DeviceRecord } from './api/devices';
 import { CredentialRecord } from './api/credentials';
 
-export const mockDevices: DeviceRecord[] = [
+const addBandwidthMetrics = (devices: DeviceRecord[]): DeviceRecord[] =>
+  devices.map((device) => ({
+    ...device,
+    interfaces: device.interfaces.map((iface, index) => {
+      const capacity = iface.bandwidth_max_mbps ?? iface.max_speed ?? 1000;
+      const rxCurrent = iface.rxload_current ?? iface.mbps_received ?? 0;
+      const txCurrent = iface.txload_current ?? iface.mbps_sent ?? 0;
+      const calculatePercent = (current: number) =>
+        capacity > 0 ? Math.min(100, Math.round((current / capacity) * 100)) : 0;
+
+      return {
+        ...iface,
+        bandwidth_max_mbps: capacity,
+        rxload_current: rxCurrent,
+        rxload_percent: iface.rxload_percent ?? calculatePercent(rxCurrent),
+        txload_current: txCurrent,
+        txload_percent: iface.txload_percent ?? calculatePercent(txCurrent),
+        input_rate_kbps:
+          iface.input_rate_kbps ??
+          Math.max(0, Math.round(rxCurrent * 1000)),
+        output_rate_kbps:
+          iface.output_rate_kbps ??
+          Math.max(0, Math.round(txCurrent * 1000)),
+        mtu: iface.mtu ?? (index % 2 === 0 ? 1514 : 1500),
+        crc_errors: iface.crc_errors ?? 0,
+        input_errors: iface.input_errors ?? (index % 4 === 0 ? 0 : index),
+        output_errors: iface.output_errors ?? (index % 3 === 0 ? 0 : index),
+      };
+    }),
+  }));
+
+const baseMockDevices: DeviceRecord[] = [
   {
     mac: 'a4:5e:60:1a:00:11',
     hostname: 'edge-sw1',
@@ -796,6 +827,8 @@ export const mockDevices: DeviceRecord[] = [
     lastUpdatedAt: '2024-06-03 03:45 UTC',
   },
 ];
+
+export const mockDevices: DeviceRecord[] = addBandwidthMetrics(baseMockDevices);
 
 export const mockCredentials: CredentialRecord[] = [
   { device_type: 'iosxe', username: 'netops', password: 'Net0ps!', secret: 'C1sco!23', ip: '10.42.1.10' },
