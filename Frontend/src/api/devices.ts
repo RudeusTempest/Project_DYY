@@ -13,6 +13,17 @@ export interface DeviceInterface {
   max_speed?: number;
   mbps_received?: number;
   mbps_sent?: number;
+  bandwidth_max_mbps?: number;
+  txload_current?: number;
+  txload_percent?: number;
+  rxload_current?: number;
+  rxload_percent?: number;
+  input_rate_kbps?: number;
+  output_rate_kbps?: number;
+  mtu?: number;
+  crc_errors?: number;
+  input_errors?: number;
+  output_errors?: number;
 }
 
 // Data about neighboring devices learned from CDP/LLDP.
@@ -38,6 +49,11 @@ export interface DeviceRecord {
 export type DeviceStatus = 'active' | 'inactive' | 'unauthorized';
 
 const API_BASE_URL = 'http://localhost:8000';
+
+const toNumber = (value: unknown): number | undefined => {
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
 
 // Small helper that turns whatever the backend sends into a clean interface
 // object. This keeps undefined/null safeguards in one place.
@@ -67,19 +83,80 @@ const normalizeInterface = (
     status,
   };
 
-  const maxSpeed = Number(rawInterface?.max_speed);
-  if (!Number.isNaN(maxSpeed)) {
+  const bandwidthDetails = rawInterface?.bandwidth ?? {};
+
+  const bandwidthMax = toNumber(bandwidthDetails?.bandwidth_max_mbps);
+  if (bandwidthMax !== undefined) {
+    normalized.bandwidth_max_mbps = bandwidthMax;
+  }
+
+  const maxSpeed = toNumber(rawInterface?.max_speed) ?? bandwidthMax;
+  if (maxSpeed !== undefined) {
     normalized.max_speed = maxSpeed;
   }
 
-  const rx = Number(rawInterface?.mbps_received);
-  if (!Number.isNaN(rx)) {
+  const rx = toNumber(rawInterface?.mbps_received);
+  if (rx !== undefined) {
     normalized.mbps_received = rx;
   }
 
-  const tx = Number(rawInterface?.mbps_sent);
-  if (!Number.isNaN(tx)) {
+  const tx = toNumber(rawInterface?.mbps_sent);
+  if (tx !== undefined) {
     normalized.mbps_sent = tx;
+  }
+
+  const rxLoadCurrent = toNumber(bandwidthDetails?.rxload_current);
+  if (rxLoadCurrent !== undefined) {
+    normalized.rxload_current = rxLoadCurrent;
+  }
+
+  const rxLoadPercent = toNumber(bandwidthDetails?.rxload_percent);
+  if (rxLoadPercent !== undefined) {
+    normalized.rxload_percent = rxLoadPercent;
+  }
+
+  const txLoadCurrent = toNumber(bandwidthDetails?.txload_current);
+  if (txLoadCurrent !== undefined) {
+    normalized.txload_current = txLoadCurrent;
+  }
+
+  const txLoadPercent = toNumber(bandwidthDetails?.txload_percent);
+  if (txLoadPercent !== undefined) {
+    normalized.txload_percent = txLoadPercent;
+  }
+
+  const inputRateKbps =
+    toNumber(bandwidthDetails?.input_rate_kbps) ??
+    (rx !== undefined ? rx * 1000 : undefined);
+  if (inputRateKbps !== undefined) {
+    normalized.input_rate_kbps = inputRateKbps;
+  }
+
+  const outputRateKbps =
+    toNumber(bandwidthDetails?.output_rate_kbps) ??
+    (tx !== undefined ? tx * 1000 : undefined);
+  if (outputRateKbps !== undefined) {
+    normalized.output_rate_kbps = outputRateKbps;
+  }
+
+  const mtu = toNumber(bandwidthDetails?.mtu);
+  if (mtu !== undefined) {
+    normalized.mtu = mtu;
+  }
+
+  const crcErrors = toNumber(bandwidthDetails?.crc_errors);
+  if (crcErrors !== undefined) {
+    normalized.crc_errors = crcErrors;
+  }
+
+  const inputErrors = toNumber(bandwidthDetails?.input_errors);
+  if (inputErrors !== undefined) {
+    normalized.input_errors = inputErrors;
+  }
+
+  const outputErrors = toNumber(bandwidthDetails?.output_errors);
+  if (outputErrors !== undefined) {
+    normalized.output_errors = outputErrors;
   }
 
   return normalized;
