@@ -61,7 +61,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               checked={theme === 'dark'}
               onChange={toggleTheme}
             />
-            <span>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+            <span>{theme === 'dark' ? 'Dark mode' : 'Dark mode'}</span>
           </label>
         </section>
 
