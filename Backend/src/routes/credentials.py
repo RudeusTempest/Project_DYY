@@ -9,10 +9,10 @@ router = APIRouter()
 
 
 @router.post("/add_device")    
-async def add_device(cred: device_cred) -> Dict[str, bool]:
+async def add_device(cred: device_cred, method = str) -> Dict[str, bool]:
     try:
         CredentialsController.add_device_cred(cred)
-        refreshed = await DeviceController.refresh_by_ip(cred.ip, "snmp")
+        refreshed = await DeviceController.refresh_by_ip(cred.ip, method)
         return {"device added": True, "refreshed": refreshed}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add device: {str(e)}")
