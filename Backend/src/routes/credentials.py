@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.post("/add_device")    
-async def add_device(cred: device_cred, method = str) -> Dict[str, bool]:
+async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, bool]:
     try:
         CredentialsController.add_device_cred(cred)
         refreshed = await DeviceController.refresh_by_ip(cred.ip, method)
