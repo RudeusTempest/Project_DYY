@@ -13,7 +13,10 @@ export type DeviceViewMode = 'gallery' | 'list';
 interface DeviceListProps {
   devices: DeviceRecord[];
   credentialMap: Record<string, CredentialRecord>;
-  protocol: ProtocolMethod;
+  getProtocolForDevice: (
+    device: DeviceRecord,
+    credential?: CredentialRecord
+  ) => ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
   viewMode: DeviceViewMode;
@@ -25,7 +28,7 @@ interface DeviceListProps {
 const DeviceList: React.FC<DeviceListProps> = ({
   devices,
   credentialMap,
-  protocol,
+  getProtocolForDevice,
   onSelectDevice,
   onRefreshDevice,
   viewMode,
@@ -48,13 +51,17 @@ const DeviceList: React.FC<DeviceListProps> = ({
           const relatedCredential = device.primaryIp
             ? credentialMap[device.primaryIp]
             : undefined;
+          const protocolForDevice = getProtocolForDevice(
+            device,
+            relatedCredential
+          );
 
           return (
             <DeviceCard
               key={`${device.mac}-${device.hostname}`}
               device={device}
               credential={relatedCredential}
-              protocol={protocol}
+              protocol={protocolForDevice}
               status={deriveDeviceStatus(device)}
               onSelect={onSelectDevice}
               onRefresh={onRefreshDevice}

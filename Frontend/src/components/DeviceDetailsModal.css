@@ -38,6 +38,60 @@
   margin-bottom: 0.5rem;
 }
 
+.modal-protocol-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+}
+
+.modal-protocol-toggle__note {
+  margin: 0.2rem 0 0;
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}
+
+.modal-protocol-toggle__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-protocol-toggle__pill {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+}
+
+.modal-protocol-toggle__button {
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.modal-protocol-toggle__button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.modal-protocol-toggle__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .modal-table {
   display: flex;
   flex-direction: column;

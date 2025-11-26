@@ -1,11 +1,17 @@
 import React, { useEffect } from 'react';
 import './DeviceDetailsModal.css';
-import { DeviceRecord, deriveDeviceStatus } from '../api/devices';
+import {
+  DeviceRecord,
+  deriveDeviceStatus,
+  ProtocolMethod,
+} from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
 
 interface DeviceDetailsModalProps {
   device: DeviceRecord | null;
   credential?: CredentialRecord;
+  protocol: ProtocolMethod;
+  onProtocolChange: (method: ProtocolMethod) => void;
   onClose: () => void;
 }
 
@@ -14,6 +20,8 @@ interface DeviceDetailsModalProps {
 const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   device,
   credential,
+  protocol,
+  onProtocolChange,
   onClose,
 }) => {
   useEffect(() => {
@@ -35,7 +43,9 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   }
 
   const status = deriveDeviceStatus(device);
-  const deviceIp = device.primaryIp || credential?.ip || 'Not available';
+  const deviceIp = device.primaryIp || credential?.ip;
+  const deviceIpLabel = deviceIp || 'Not available';
+  const hasDeviceIp = Boolean(deviceIp);
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -43,6 +53,11 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     if (event.target === event.currentTarget) {
       onClose();
     }
+  };
+
+  const handleProtocolToggle = () => {
+    const nextMethod: ProtocolMethod = protocol === 'snmp' ? 'cli' : 'snmp';
+    onProtocolChange(nextMethod);
   };
 
   return (
@@ -54,7 +69,7 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
         <h2>{device.hostname}</h2>
         <p>
-          <strong>IP:</strong> {deviceIp}
+          <strong>IP:</strong> {deviceIpLabel}
         </p>
         <p>
           <strong>MAC:</strong> {device.mac}
@@ -65,6 +80,28 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         <p>
           <strong>Last updated:</strong> {device.lastUpdatedAt}
         </p>
+        <div className="modal-protocol-toggle">
+          <div>
+            <h3>Update method</h3>
+            <p className="modal-protocol-toggle__note">
+              Applies only to this device.
+            </p>
+          </div>
+          <div className="modal-protocol-toggle__actions">
+            <span className="modal-protocol-toggle__pill">
+              {hasDeviceIp
+                ? `Using ${protocol.toUpperCase()}`
+                : 'No IP available'}
+            </span>
+            <button
+              className="modal-protocol-toggle__button"
+              onClick={handleProtocolToggle}
+              disabled={!hasDeviceIp}
+            >
+              Switch to {protocol === 'snmp' ? 'CLI' : 'SNMP'}
+            </button>
+          </div>
+        </div>
 
         {credential && (
           <div className="modal-section">

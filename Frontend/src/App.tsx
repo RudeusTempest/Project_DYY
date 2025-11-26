@@ -42,8 +42,14 @@ const AppContent: React.FC = () => {
   // Loading + error states for the initial fetch.
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Track a manual refresh triggered by the header button.
+  const [isRefreshing, setIsRefreshing] = useState(false);
   // Protocol preference for the Update button (default SNMP as requested).
   const [protocol, setProtocol] = useState<ProtocolMethod>('snmp');
+  // Per-device protocol overrides, keyed by IP.
+  const [deviceProtocolOverrides, setDeviceProtocolOverrides] = useState<
+    Record<string, ProtocolMethod>
+  >({});
   // Preferred view for device list (gallery default).
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   // Current sidebar status filter; "all" shows every device.
@@ -65,14 +71,14 @@ const AppContent: React.FC = () => {
         return;
       }
 
-    const [deviceData, credentialData] = await Promise.all([
-      fetchAllDevices().catch(() => null),
-      fetchAllCredentials().catch(() => null),
-    ]);
+      const [deviceData, credentialData] = await Promise.all([
+        fetchAllDevices().catch(() => null),
+        fetchAllCredentials().catch(() => null),
+      ]);
 
-    const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
-    const hasCredentials =
-      Array.isArray(credentialData) && credentialData.length > 0;
+      const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
+      const hasCredentials =
+        Array.isArray(credentialData) && credentialData.length > 0;
 
       if (hasDevices && hasCredentials) {
         setDevices(deviceData);
@@ -104,6 +110,20 @@ const AppContent: React.FC = () => {
     }
   }, [reloadDevicesAndCredentials]);
 
+  const handleGlobalRefresh = useCallback(async () => {
+    setError(null);
+    setIsRefreshing(true);
+    try {
+      await reloadDevicesAndCredentials();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to refresh devices.'
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [reloadDevicesAndCredentials]);
+
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
@@ -118,6 +138,43 @@ const AppContent: React.FC = () => {
     });
     return map;
   }, [credentials]);
+
+  // Helper to resolve which IP we should associate with this device.
+  const resolveDeviceIp = useCallback(
+    (device: DeviceRecord, credential?: CredentialRecord) =>
+      device.primaryIp || credential?.ip,
+    []
+  );
+
+  // Determine which protocol should be used for a given device (override or global).
+  const getProtocolForDevice = useCallback(
+    (device: DeviceRecord, credential?: CredentialRecord): ProtocolMethod => {
+      const deviceIp = resolveDeviceIp(device, credential);
+      if (deviceIp && deviceProtocolOverrides[deviceIp]) {
+        return deviceProtocolOverrides[deviceIp];
+      }
+      return protocol;
+    },
+    [deviceProtocolOverrides, protocol, resolveDeviceIp]
+  );
+
+  const handleDeviceProtocolChange = useCallback(
+    (
+      device: DeviceRecord,
+      credential: CredentialRecord | undefined,
+      method: ProtocolMethod
+    ) => {
+      const deviceIp = resolveDeviceIp(device, credential);
+      if (!deviceIp) {
+        return;
+      }
+      setDeviceProtocolOverrides((previous) => ({
+        ...previous,
+        [deviceIp]: method,
+      }));
+    },
+    [resolveDeviceIp]
+  );
 
   // Filtering happens entirely in memory – no extra backend calls.
   const filteredDevices = useMemo(() => {
@@ -181,9 +238,11 @@ const AppContent: React.FC = () => {
       }
       setError(null);
 
+      const methodToUse = deviceProtocolOverrides[ip] ?? protocol;
+
       // 1) Ask the backend to refresh the device using the current protocol.
       try {
-        await refreshDeviceByIp(ip, protocol);
+        await refreshDeviceByIp(ip, methodToUse);
       } catch (refreshError) {
         setError(
           refreshError instanceof Error
@@ -232,7 +291,7 @@ const AppContent: React.FC = () => {
         );
       }
     },
-    [protocol, useMockData]
+    [deviceProtocolOverrides, protocol, useMockData]
   );
 
   const handleDeviceAdded = useCallback(async () => {
@@ -256,6 +315,13 @@ const AppContent: React.FC = () => {
     return undefined;
   }, [selectedDevice, credentialMap]);
 
+  const selectedDeviceProtocol = useMemo(() => {
+    if (!selectedDevice) {
+      return protocol;
+    }
+    return getProtocolForDevice(selectedDevice, credentialForSelectedDevice);
+  }, [selectedDevice, credentialForSelectedDevice, getProtocolForDevice, protocol]);
+
   const handleMockToggle = useCallback(
     async (enabled: boolean) => {
       setUseMockData(enabled);
@@ -269,6 +335,9 @@ const AppContent: React.FC = () => {
       <Header
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onRefreshAll={handleGlobalRefresh}
+        isRefreshing={isRefreshing}
+        isLoading={isLoading}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAddDevice={() => setIsAddDeviceOpen(true)}
       />
@@ -280,12 +349,15 @@ const AppContent: React.FC = () => {
 
       <main className="main-content">
         {isLoading && <div className="loading-state">Loading devices…</div>}
+        {!isLoading && isRefreshing && (
+          <div className="loading-state">Refreshing devices…</div>
+        )}
         {error && <div className="error-state">{error}</div>}
         {!isLoading && (
           <DeviceList
             devices={filteredDevices}
             credentialMap={credentialMap}
-            protocol={protocol}
+            getProtocolForDevice={getProtocolForDevice}
             onSelectDevice={(device) => setSelectedDevice(device)}
             onRefreshDevice={handleDeviceRefresh}
             viewMode={viewMode}
@@ -296,6 +368,16 @@ const AppContent: React.FC = () => {
       <DeviceDetailsModal
         device={selectedDevice}
         credential={credentialForSelectedDevice}
+        protocol={selectedDeviceProtocol}
+        onProtocolChange={(method) => {
+          if (selectedDevice) {
+            handleDeviceProtocolChange(
+              selectedDevice,
+              credentialForSelectedDevice,
+              method
+            );
+          }
+        }}
         onClose={() => setSelectedDevice(null)}
       />
 
