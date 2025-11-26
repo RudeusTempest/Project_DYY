@@ -6,16 +6,22 @@ import logoRight from '../logos/maof-logo.svg';
 interface HeaderProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  onRefreshAll: () => void;
+  isRefreshing: boolean;
+  isLoading: boolean;
   onOpenSettings: () => void;
   onOpenAddDevice: () => void;
 }
 
-// The header stays fixed at the top and exposes the global actions (search and
-// settings). Keeping the component small and explicit helps beginners see which
-// props flow in from the parent App component.
+// The header stays fixed at the top and exposes the global actions (search,
+// refresh, settings, add device). Keeping the component small and explicit
+// helps beginners see which props flow in from the parent App component.
 const Header: React.FC<HeaderProps> = ({
   searchTerm,
   onSearchChange,
+  onRefreshAll,
+  isRefreshing,
+  isLoading,
   onOpenSettings,
   onOpenAddDevice,
 }) => {
@@ -43,6 +49,13 @@ const Header: React.FC<HeaderProps> = ({
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
         />
+        <button
+          className="header__refresh-button"
+          onClick={onRefreshAll}
+          disabled={isRefreshing || isLoading}
+        >
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
         <button className="header__add-device-button" onClick={onOpenAddDevice}>
           Add Device
         </button>

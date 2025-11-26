@@ -52,6 +52,26 @@
   color: var(--muted-text);
 }
 
+.header__refresh-button {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.header__refresh-button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.header__refresh-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .header__add-device-button,
 .header__settings-button {
   padding: 0.45rem 1rem;
