@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './DeviceDetailsModal.css';
 import {
   DeviceRecord,
@@ -6,6 +6,14 @@ import {
   ProtocolMethod,
 } from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
+
+const stepConfig = [
+  { id: 'credentials', label: 'Credentials' },
+  { id: 'interfaces', label: 'Interfaces' },
+  { id: 'ports', label: 'Ports' },
+] as const;
+
+type StepId = (typeof stepConfig)[number]['id'];
 
 interface DeviceDetailsModalProps {
   device: DeviceRecord | null;
@@ -15,8 +23,8 @@ interface DeviceDetailsModalProps {
   onClose: () => void;
 }
 
-// Detailed look at a single device. It shows interfaces, neighbors, a simple
-// port grid, and credential information when available.
+// Detailed look at a single device with paginated sections to avoid long
+// scrolling.
 const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   device,
   credential,
@@ -24,10 +32,15 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   onProtocolChange,
   onClose,
 }) => {
+  const [activeStep, setActiveStep] = useState<StepId>('credentials');
+
   useEffect(() => {
     if (typeof window === 'undefined' || !device) {
       return;
     }
+
+    setActiveStep('credentials');
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -46,6 +59,11 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const deviceIp = device.primaryIp || credential?.ip;
   const deviceIpLabel = deviceIp || 'Not available';
   const hasDeviceIp = Boolean(deviceIp);
+  const currentStepIndex = stepConfig.findIndex(
+    (step) => step.id === activeStep
+  );
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === stepConfig.length - 1;
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -84,8 +102,16 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       return `${label} ${parts.join(' / ')}`;
     };
 
-    const rxSegment = makeSegment('RX', iface.rxload_current, iface.rxload_percent);
-    const txSegment = makeSegment('TX', iface.txload_current, iface.txload_percent);
+    const rxSegment = makeSegment(
+      'RX',
+      iface.rxload_current,
+      iface.rxload_percent
+    );
+    const txSegment = makeSegment(
+      'TX',
+      iface.txload_current,
+      iface.txload_percent
+    );
 
     if (rxSegment && txSegment) {
       return `${rxSegment} • ${txSegment}`;
@@ -147,26 +173,49 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const formatMtu = (iface: DeviceRecord['interfaces'][number]) =>
     typeof iface.mtu === 'number' ? iface.mtu.toLocaleString() : 'N/A';
 
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal-content">
-        <button className="modal-close" onClick={onClose}>
-          ×
-        </button>
+  const goToStep = (direction: 'prev' | 'next') => {
+    setActiveStep((prev) => {
+      const index = stepConfig.findIndex((step) => step.id === prev);
+      if (index === -1) {
+        return prev;
+      }
 
-        <h2>{device.hostname}</h2>
-        <p>
-          <strong>IP:</strong> {deviceIpLabel}
-        </p>
-        <p>
-          <strong>MAC:</strong> {device.mac}
-        </p>
-        <p>
-          <strong>Status:</strong> {status}
-        </p>
-        <p>
-          <strong>Last updated:</strong> {device.lastUpdatedAt}
-        </p>
+      const nextIndex =
+        direction === 'prev'
+          ? Math.max(index - 1, 0)
+          : Math.min(index + 1, stepConfig.length - 1);
+
+      return stepConfig[nextIndex].id;
+    });
+  };
+
+  const renderCredentialsStep = () => (
+    <div className="step-section">
+      <div className="panel">
+        <h3>Device</h3>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <span className="detail-label">IP</span>
+            <strong className="detail-value">{deviceIpLabel}</strong>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">MAC</span>
+            <strong className="detail-value">{device.mac}</strong>
+          </div>
+          <div className="detail-item detail-item--status">
+            <span className="detail-label">Status</span>
+            <span className={`status-chip status-chip--${status}`}>
+              {status}
+            </span>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Last updated</span>
+            <strong className="detail-value">{device.lastUpdatedAt}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
         <div className="modal-protocol-toggle">
           <div>
             <h3>Update method</h3>
@@ -189,21 +238,37 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             </button>
           </div>
         </div>
+      </div>
 
-        {credential && (
-          <div className="modal-section">
-            <h3>Credentials</h3>
-            <p>
-              <strong>Device type:</strong> {credential.device_type}
-            </p>
-            <p>
-              <strong>Username:</strong> {credential.username}
-            </p>
+      <div className="panel">
+        <h3>Credentials</h3>
+        {credential ? (
+          <div className="detail-grid">
+            <div className="detail-item">
+              <span className="detail-label">Device type</span>
+              <strong className="detail-value">{credential.device_type}</strong>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Username</span>
+              <strong className="detail-value">{credential.username}</strong>
+            </div>
           </div>
+        ) : (
+          <p className="muted-text">
+            No credential information available for this device.
+          </p>
         )}
+      </div>
+    </div>
+  );
 
-        <div className="modal-section">
-          <h3>Interfaces</h3>
+  const renderInterfacesStep = () => (
+    <div className="step-section">
+      <div className="panel">
+        <h3>Interfaces</h3>
+        {device.interfaces.length === 0 ? (
+          <p>No interface data available.</p>
+        ) : (
           <div className="modal-table">
             <div className="modal-table__header">
               <span>Name</span>
@@ -228,49 +293,133 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               </div>
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPortsStep = () => (
+    <div className="step-section">
+      <div className="panel">
+        <h3>Port Status</h3>
+        <div className="port-grid">
+          {device.interfaces.map((iface) => {
+            const normalizedStatus = iface.status?.toLowerCase?.() ?? '';
+            let state: 'active' | 'inactive' | 'unauthorized' = 'inactive';
+
+            if (normalizedStatus.includes('unauth')) {
+              state = 'unauthorized';
+            } else if (normalizedStatus.includes('up')) {
+              state = 'active';
+            }
+
+            return (
+              <div
+                key={`${iface.interface}-square`}
+                className={`port-grid__item port-grid__item--${state}`}
+              >
+                <span>{iface.interface}</span>
+                <small>{iface.status}</small>
+              </div>
+            );
+          })}
         </div>
+      </div>
 
-        <div className="modal-section">
-          <h3>Port Status Grid</h3>
-          <div className="port-grid">
-            {device.interfaces.map((iface) => {
-              const normalizedStatus = iface.status?.toLowerCase?.() ?? '';
-              let state: 'active' | 'inactive' | 'unauthorized' = 'inactive';
+      <div className="panel">
+        <h3>Neighbors</h3>
+        {device.neighbors.length === 0 ? (
+          <p>No neighbor information reported.</p>
+        ) : (
+          <ul className="neighbors-list">
+            {device.neighbors.map((neighbor) => (
+              <li key={`${neighbor.device_id}-${neighbor.local_interface}`}>
+                <strong>{neighbor.device_id}</strong> via {neighbor.local_interface}
+                {neighbor.port_id ? ` → ${neighbor.port_id}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
 
-              if (normalizedStatus.includes('unauth')) {
-                state = 'unauthorized';
-              } else if (normalizedStatus.includes('up')) {
-                state = 'active';
-              }
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 'interfaces':
+        return renderInterfacesStep();
+      case 'ports':
+        return renderPortsStep();
+      default:
+        return renderCredentialsStep();
+    }
+  };
 
-              return (
-                <div
-                  key={`${iface.interface}-square`}
-                  className={`port-grid__item port-grid__item--${state}`}
-                >
-                  <span>{iface.interface}</span>
-                  <small>{iface.status}</small>
-                </div>
-              );
-            })}
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content modal-content--paged">
+        <button className="modal-close" onClick={onClose}>
+          ×
+        </button>
+
+        <div className="modal-header">
+          <div className="modal-header__title">
+            <h2>{device.hostname}</h2>
+            <span className={`status-chip status-chip--${status}`}>
+              {status}
+            </span>
           </div>
+          <p className="modal-subtitle">
+            IP {deviceIpLabel} · MAC {device.mac} · Updated {device.lastUpdatedAt}
+          </p>
         </div>
 
-        <div className="modal-section">
-          <h3>Neighbors</h3>
-          {device.neighbors.length === 0 ? (
-            <p>No neighbor information reported.</p>
-          ) : (
-            <ul className="neighbors-list">
-              {device.neighbors.map((neighbor) => (
-                <li key={`${neighbor.device_id}-${neighbor.local_interface}`}>
-                  <strong>{neighbor.device_id}</strong> via{' '}
-                  {neighbor.local_interface}
-                  {neighbor.port_id ? ` → ${neighbor.port_id}` : ''}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="modal-steps">
+          {stepConfig.map((step) => {
+            const isActive = step.id === activeStep;
+            return (
+              <button
+                key={step.id}
+                className={`modal-step ${isActive ? 'modal-step--active' : ''}`}
+                onClick={() => setActiveStep(step.id)}
+                type="button"
+              >
+                {step.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="modal-body">{renderStepContent()}</div>
+
+        <div className="modal-footer">
+          <span className="modal-footer__progress">
+            Step {currentStepIndex + 1} of {stepConfig.length}
+          </span>
+          <div className="modal-footer__actions">
+            <button
+              className="nav-button nav-button--ghost"
+              type="button"
+              onClick={onClose}
+            >
+              Close
+            </button>
+            <button
+              className="nav-button"
+              type="button"
+              onClick={() => goToStep('prev')}
+              disabled={isFirstStep}
+            >
+              Previous
+            </button>
+            <button
+              className="nav-button nav-button--primary"
+              type="button"
+              onClick={() => (isLastStep ? onClose() : goToStep('next'))}
+            >
+              {isLastStep ? 'Done' : 'Next'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
