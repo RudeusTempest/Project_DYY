@@ -297,6 +297,32 @@ export const refreshDeviceByIp = async (
   }
 };
 
+export const startProgram = async (
+  deviceInterval: number,
+  mbpsInterval: number,
+  method: ProtocolMethod,
+  timeoutMs = 8000
+): Promise<void> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/devices/start_program?device_interval=${deviceInterval}&mbps_interval=${mbpsInterval}&method=${method}`,
+      { method: 'PUT', signal: controller.signal }
+    );
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(
+        `Program start failed (${response.status}): ${detail ?? ''}`
+      );
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 // Shared helper that assigns a status string so both the sidebar and cards can
 // show consistent colors. The logic is intentionally simple:
 // 1. If any interface mentions "unauth" we treat the device as unauthorized.

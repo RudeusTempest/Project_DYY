@@ -13,12 +13,14 @@ export type DeviceViewMode = 'gallery' | 'list';
 interface DeviceListProps {
   devices: DeviceRecord[];
   credentialMap: Record<string, CredentialRecord>;
+  pendingIpLookup: Record<string, boolean>;
   getProtocolForDevice: (
     device: DeviceRecord,
     credential?: CredentialRecord
   ) => ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
+  onErasePending: (ip: string) => void;
   viewMode: DeviceViewMode;
 }
 
@@ -28,9 +30,11 @@ interface DeviceListProps {
 const DeviceList: React.FC<DeviceListProps> = ({
   devices,
   credentialMap,
+  pendingIpLookup,
   getProtocolForDevice,
   onSelectDevice,
   onRefreshDevice,
+  onErasePending,
   viewMode,
 }) => {
   const renderContent = () => {
@@ -51,6 +55,12 @@ const DeviceList: React.FC<DeviceListProps> = ({
           const relatedCredential = device.primaryIp
             ? credentialMap[device.primaryIp]
             : undefined;
+          const isPending =
+            (device.primaryIp && pendingIpLookup[device.primaryIp]) || false;
+          const handleErase =
+            isPending && device.primaryIp
+              ? () => onErasePending(device.primaryIp as string)
+              : undefined;
           const protocolForDevice = getProtocolForDevice(
             device,
             relatedCredential
@@ -61,6 +71,8 @@ const DeviceList: React.FC<DeviceListProps> = ({
               key={`${device.mac}-${device.hostname}`}
               device={device}
               credential={relatedCredential}
+              isPendingCredential={isPending}
+              onErasePending={handleErase}
               protocol={protocolForDevice}
               status={deriveDeviceStatus(device)}
               onSelect={onSelectDevice}

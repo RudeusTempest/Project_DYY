@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Modal.css';
 import { addCredential, AddCredentialPayload } from '../api/credentials';
+import { ProtocolMethod } from '../api/devices';
 
 interface AddDeviceModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
   onDeviceAdded,
 }) => {
   const [formState, setFormState] = useState<CredentialFormState>(initialFormState);
+  const [method, setMethod] = useState<ProtocolMethod>('snmp');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -65,8 +67,9 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
         payload.snmp_password = formState.snmp_password;
       }
 
-      await addCredential(payload);
+      await addCredential(payload, method);
       setFormState(initialFormState);
+      setMethod('snmp');
       await onDeviceAdded();
       onClose();
     } catch (error) {
@@ -96,6 +99,25 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
         </button>
         <h2>Add Device</h2>
         <p>Fill the credentials below and submit to call /credentials/add_device.</p>
+        <div className="modal-choice-row" role="group" aria-label="Discovery method">
+          <span className="modal-choice-row__label">Method</span>
+          <div className="modal-choice-row__options">
+            <button
+              type="button"
+              className={`pill-toggle ${method === 'snmp' ? 'pill-toggle--active' : ''}`}
+              onClick={() => setMethod('snmp')}
+            >
+              SNMP
+            </button>
+            <button
+              type="button"
+              className={`pill-toggle ${method === 'cli' ? 'pill-toggle--active' : ''}`}
+              onClick={() => setMethod('cli')}
+            >
+              CLI
+            </button>
+          </div>
+        </div>
         <form className="modal-form" onSubmit={handleSubmit}>
           <label>
             Device Type

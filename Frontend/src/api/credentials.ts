@@ -21,6 +21,8 @@ export interface AddCredentialPayload {
   snmp_password?: string;
 }
 
+export type CredentialMethod = 'snmp' | 'cli';
+
 export const fetchAllCredentials = async (): Promise<CredentialRecord[]> => {
   const response = await fetch(
     `${API_BASE_URL}/credentials/connection_details`
@@ -56,15 +58,19 @@ export const fetchCredentialByIp = async (
 };
 
 export const addCredential = async (
-  payload: AddCredentialPayload
+  payload: AddCredentialPayload,
+  method: CredentialMethod
 ): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/credentials/add_device`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/credentials/add_device?method=${method}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!response.ok) {
     const detail = await response.text();

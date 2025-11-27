@@ -21,6 +21,7 @@
 .device-list__list .device-card {
   flex-direction: row;
   align-items: center;
+  flex-wrap: wrap;
   padding: 0.75rem 1rem;
   gap: 1rem;
 }
@@ -70,9 +71,12 @@
   font-size: 1rem;
 }
 
-.device-list__list .device-card__update-button {
+.device-list__list .device-card__actions {
   margin-left: auto;
-  align-self: center;
+}
+
+.device-list__list .device-card__pending-note {
+  width: 100%;
 }
 
 .device-list__empty {
