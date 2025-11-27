@@ -48,8 +48,6 @@ class ConnectionService:
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
                 info_neighbors_output = net_connect.send_command("show cdp neighbors")
-                # Close the connection
-                net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
         
@@ -74,8 +72,6 @@ class ConnectionService:
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
                 info_neighbors_output = net_connect.send_command("show cdp neighbors")
-                # Close the connection
-                net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
         except Exception as e:
@@ -107,9 +103,6 @@ class ConnectionService:
                 mac_output = net_connect.send_command(f"show interfaces {interface_0} | match Hardware")
                 raw_date = datetime.now()
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
-
-                # Close the connection
-                net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, last_updated, raw_date
         except Exception as e:
@@ -256,7 +249,7 @@ class ConnectionService:
 
 
 
-#""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+#""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     @staticmethod
     def get_cisco_mbps_output(net_connect: Any, device_type: str) -> Optional[str]:
@@ -311,8 +304,6 @@ class ConnectionService:
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
                 info_neighbors_output = net_connect.send_command("show cdp neighbors")
-                # Close connection
-                # net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
 
@@ -341,8 +332,6 @@ class ConnectionService:
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
 
                 info_neighbors_output = net_connect.send_command("show cdp neighbors")
-                # Close connection
-                # net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date
         except Exception as e:
@@ -354,8 +343,10 @@ class ConnectionService:
     def get_juniper_outputs_cli(net_connect: Any, device_type: str) -> Optional[Tuple[str, str, str, str, str, datetime]]:
         try:
             if device_type == "juniper_junos":
+                
                 # Enter CLI mode
                 net_connect.send_command("cli")
+
                 # Disable pagination
                 net_connect.send_command("set cli screen-length 0")
                 
@@ -378,9 +369,6 @@ class ConnectionService:
                 
                 raw_date = datetime.now()
                 last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
-
-                # Close connection
-                # net_connect.disconnect()
 
                 return hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date
         except Exception as e:
