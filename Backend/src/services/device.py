@@ -22,6 +22,10 @@ class DeviceService:
                 print("Updating Cisco device:", cred["ip"])
 
                 outputs = ConnectionService.get_cisco_outputs(connection, cred["device_type"])
+
+                # Close the connection
+                connection.disconnect()
+
                 if outputs is None:
                     print(f"Failed to get outputs from device {cred['ip']}")
                     return False
@@ -66,7 +70,12 @@ class DeviceService:
 
             elif "juniper" in cred["device_type"]:
                 print("Updating Juniper device:", cred["ip"])
+
                 outputs = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
+
+                # Close the connection
+                connection.disconnect()
+
                 if outputs is None:
                     print(f"Failed to get outputs from device {cred['ip']}")
                     return False
@@ -245,6 +254,10 @@ class DeviceService:
 
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
+                
+                # Close the connection
+                connection.disconnect()
+                
                 if outputs is None:
                     print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
                     return None
@@ -270,6 +283,10 @@ class DeviceService:
 
             elif "juniper" in cred["device_type"]:
                 outputs = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
+
+                # Close the connection
+                connection.disconnect()
+
                 if outputs is None:
                     print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
                     return None
@@ -324,6 +341,10 @@ class DeviceService:
             
             if "cisco" in cred["device_type"]:
                 all_interfaces_output = ConnectionService.get_cisco_mbps_output(connection, cred["device_type"])
+
+                # Close the connection
+                connection.disconnect()
+                
                 if all_interfaces_output is None:
                     print(f"Failed to get Mbps output from device {cred.get('ip', 'unknown')}")
                     return None
@@ -338,6 +359,10 @@ class DeviceService:
             
             elif "juniper" in cred["device_type"]:
                 all_interfaces_output = ConnectionService.get_juniper_mbps_output(connection, cred["device_type"])
+
+                # Close the connection
+                connection.disconnect()
+                
                 if all_interfaces_output is None:
                     print(f"Failed to get Mbps output from device {cred.get('ip', 'unknown')}")
                     return None
