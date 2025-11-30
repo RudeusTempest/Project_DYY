@@ -75,10 +75,6 @@
   margin-left: auto;
 }
 
-.device-list__list .device-card__pending-note {
-  width: 100%;
-}
-
 .device-list__empty {
   color: var(--muted-text);
   text-align: center;

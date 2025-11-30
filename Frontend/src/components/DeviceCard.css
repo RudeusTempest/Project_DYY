@@ -56,11 +56,6 @@
   background-color: var(--status-unauthorized);
 }
 
-.device-card__status--pending {
-  background-color: var(--muted-text);
-  color: #fff;
-}
-
 .device-card__details {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -105,29 +100,8 @@
   opacity: 0.85;
 }
 
-.device-card__pending-note {
-  margin: 0;
-  color: var(--muted-text);
-  font-size: 0.9rem;
-}
-
 .device-card__actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.device-card__erase-button {
-  align-self: flex-start;
-  padding: 0.45rem 0.9rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background-color: transparent;
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-.device-card__erase-button:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
 }

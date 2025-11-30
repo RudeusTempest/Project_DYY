@@ -6,8 +6,6 @@ import { CredentialRecord } from '../api/credentials';
 interface DeviceCardProps {
   device: DeviceRecord;
   credential?: CredentialRecord;
-  isPendingCredential?: boolean;
-  onErasePending?: () => void;
   status: DeviceStatus;
   protocol: ProtocolMethod;
   onSelect: (device: DeviceRecord) => void;
@@ -19,8 +17,6 @@ interface DeviceCardProps {
 const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
   credential,
-  isPendingCredential = false,
-  onErasePending,
   status,
   protocol,
   onSelect,
@@ -42,22 +38,12 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
     onRefresh(deviceIp);
   };
 
-  const handleEraseClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    if (onErasePending) {
-      onErasePending();
-    }
-  };
-
   const statusLabel =
-    (isPendingCredential && 'Pending') ||
     (status === 'active' && 'Active') ||
     (status === 'inactive' && 'Inactive') ||
     'Unauthorized';
 
-  const statusClass = isPendingCredential
-    ? 'device-card__status--pending'
-    : `device-card__status--${status}`;
+  const statusClass = `device-card__status--${status}`;
 
   return (
     <div className="device-card" onClick={() => onSelect(device)}>
@@ -93,12 +79,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
         </div>
       </div>
 
-      {isPendingCredential && (
-        <p className="device-card__pending-note">
-          Credentials saved. Waiting for discovery to populate device details.
-        </p>
-      )}
-
       <div className="device-card__actions">
         <button
           className="device-card__update-button"
@@ -107,15 +87,6 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
         >
           Update ({protocol.toUpperCase()})
         </button>
-        {isPendingCredential && (
-          <button
-            className="device-card__erase-button"
-            type="button"
-            onClick={handleEraseClick}
-          >
-            Erase from list
-          </button>
-        )}
       </div>
     </div>
   );

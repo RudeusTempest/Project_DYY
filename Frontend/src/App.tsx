@@ -165,58 +165,6 @@ const AppContent: React.FC = () => {
     []
   );
 
-  const knownDeviceIps = useMemo(() => {
-    const ipSet = new Set<string>();
-    devices.forEach((device) => {
-      if (device.primaryIp) {
-        ipSet.add(device.primaryIp);
-      }
-      device.interfaces.forEach((iface) => {
-        if (
-          typeof iface.ip_address === 'string' &&
-          iface.ip_address.toLowerCase() !== 'unassigned' &&
-          iface.ip_address.toLowerCase() !== 'unknown'
-        ) {
-          ipSet.add(iface.ip_address);
-        }
-      });
-    });
-    return ipSet;
-  }, [devices]);
-
-  const pendingCredentials = useMemo(
-    () => credentials.filter((credential) => credential.ip && !knownDeviceIps.has(credential.ip)),
-    [credentials, knownDeviceIps]
-  );
-
-  const pendingDevices = useMemo(
-    () =>
-      pendingCredentials.map((credential) => ({
-        mac: `pending-${credential.ip}`,
-        hostname: credential.device_type || 'Credentials saved',
-        interfaces: [],
-        neighbors: [],
-        lastUpdatedAt: 'Waiting for first poll',
-        primaryIp: credential.ip,
-      })),
-    [pendingCredentials]
-  );
-
-  const pendingIpLookup = useMemo(() => {
-    const lookup: Record<string, boolean> = {};
-    pendingCredentials.forEach((credential) => {
-      if (credential.ip) {
-        lookup[credential.ip] = true;
-      }
-    });
-    return lookup;
-  }, [pendingCredentials]);
-
-  const displayDevices = useMemo(
-    () => [...devices, ...pendingDevices],
-    [devices, pendingDevices]
-  );
-
   // Determine which protocol should be used for a given device (override or global).
   const getProtocolForDevice = useCallback(
     (device: DeviceRecord, credential?: CredentialRecord): ProtocolMethod => {
@@ -251,7 +199,7 @@ const AppContent: React.FC = () => {
   const filteredDevices = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
-    return displayDevices.filter((device) => {
+    return devices.filter((device) => {
       if (statusFilter !== 'all' && deriveDeviceStatus(device) !== statusFilter) {
         return false;
       }
@@ -266,18 +214,18 @@ const AppContent: React.FC = () => {
         : false;
       return hostnameMatch || ipMatch;
     });
-  }, [displayDevices, searchTerm, statusFilter]);
+  }, [devices, searchTerm, statusFilter]);
 
   // Sidebar counts update automatically whenever the devices array changes.
   const sidebarCounts = useMemo(() => {
     const counts = {
-      total: displayDevices.length,
+      total: devices.length,
       active: 0,
       inactive: 0,
       unauthorized: 0,
     };
 
-    displayDevices.forEach((device) => {
+    devices.forEach((device) => {
       const status = deriveDeviceStatus(device);
       if (status === 'active') {
         counts.active += 1;
@@ -289,7 +237,7 @@ const AppContent: React.FC = () => {
     });
 
     return counts;
-  }, [displayDevices]);
+  }, [devices]);
 
   const handleStatusFilterChange = useCallback(
     (status: DeviceStatus | 'all') => {
@@ -365,18 +313,6 @@ const AppContent: React.FC = () => {
     [deviceProtocolOverrides, protocol, useMockData]
   );
 
-  const handleErasePendingCredential = useCallback(
-    (ip: string) => {
-      if (!ip || knownDeviceIps.has(ip)) {
-        return;
-      }
-      setCredentials((previous) =>
-        previous.filter((credential) => credential.ip !== ip)
-      );
-    },
-    [knownDeviceIps]
-  );
-
   const handleDeviceAdded = useCallback(async () => {
     setError(null);
     try {
@@ -440,11 +376,9 @@ const AppContent: React.FC = () => {
           <DeviceList
             devices={filteredDevices}
             credentialMap={credentialMap}
-            pendingIpLookup={pendingIpLookup}
             getProtocolForDevice={getProtocolForDevice}
             onSelectDevice={(device) => setSelectedDevice(device)}
             onRefreshDevice={handleDeviceRefresh}
-            onErasePending={handleErasePendingCredential}
             viewMode={viewMode}
           />
         )}
