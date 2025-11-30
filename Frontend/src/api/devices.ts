@@ -61,21 +61,28 @@ const normalizeInterface = (
   rawInterface: any,
   index: number
 ): DeviceInterface => {
+  // Accept both lower/upper-case keys because different platforms serialize
+  // interface fields differently.
+  const rawName =
+    rawInterface?.interface ??
+    rawInterface?.Interface ??
+    rawInterface?.name;
   const fallbackName = `Interface ${index + 1}`;
-  const name =
-    typeof rawInterface?.interface === 'string'
-      ? rawInterface.interface
-      : fallbackName;
+  const name = typeof rawName === 'string' ? rawName : fallbackName;
+
+  const rawIp =
+    rawInterface?.ip_address ??
+    rawInterface?.IP_Address ??
+    rawInterface?.ip ??
+    rawInterface?.['IP Address'];
 
   const ip =
-    typeof rawInterface?.ip_address === 'string'
-      ? rawInterface.ip_address
-      : 'unassigned';
+    typeof rawIp === 'string' && rawIp.length > 0 ? rawIp : 'unassigned';
+
+  const rawStatus = rawInterface?.status ?? rawInterface?.Status;
 
   const status =
-    typeof rawInterface?.status === 'string'
-      ? rawInterface.status
-      : 'Unknown';
+    typeof rawStatus === 'string' ? rawStatus : 'Unknown';
 
   const normalized: DeviceInterface = {
     interface: name,
