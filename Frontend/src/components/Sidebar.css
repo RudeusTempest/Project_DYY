@@ -82,3 +82,29 @@
   border-color: var(--status-unauthorized);
   color: var(--status-unauthorized);
 }
+
+.sidebar__subtitle {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted-text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sidebar__list--vendors {
+  margin-top: 0.25rem;
+}
+
+.sidebar__item--vendor {
+  border-color: var(--border-color);
+}
+
+.sidebar__item--cisco {
+  border-color: #0b5fff;
+  color: #0b5fff;
+}
+
+.sidebar__item--juniper {
+  border-color: #008c65;
+  color: #008c65;
+}

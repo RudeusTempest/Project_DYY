@@ -12,7 +12,9 @@ export type DeviceViewMode = 'gallery' | 'list';
 
 interface DeviceListProps {
   devices: DeviceRecord[];
-  credentialMap: Record<string, CredentialRecord>;
+  findCredentialForDevice: (
+    device: DeviceRecord
+  ) => CredentialRecord | undefined;
   getProtocolForDevice: (
     device: DeviceRecord,
     credential?: CredentialRecord
@@ -27,7 +29,7 @@ interface DeviceListProps {
 // stays approachable.
 const DeviceList: React.FC<DeviceListProps> = ({
   devices,
-  credentialMap,
+  findCredentialForDevice,
   getProtocolForDevice,
   onSelectDevice,
   onRefreshDevice,
@@ -48,9 +50,7 @@ const DeviceList: React.FC<DeviceListProps> = ({
     return (
       <div className={containerClass}>
         {devices.map((device) => {
-          const relatedCredential = device.primaryIp
-            ? credentialMap[device.primaryIp]
-            : undefined;
+          const relatedCredential = findCredentialForDevice(device);
           const protocolForDevice = getProtocolForDevice(
             device,
             relatedCredential

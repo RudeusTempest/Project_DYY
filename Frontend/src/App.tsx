@@ -59,8 +59,19 @@ const AppContent: React.FC = () => {
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   // Current sidebar status filter; "all" shows every device.
   const [statusFilter, setStatusFilter] = useState<DeviceStatus | 'all'>('all');
+  // Current vendor filter; "all" shows every device regardless of platform.
+  const [vendorFilter, setVendorFilter] = useState<'all' | 'cisco' | 'juniper'>(
+    'all'
+  );
 
   const { theme } = useTheme();
+
+  const normalizeIp = useCallback((ip?: string) => {
+    if (!ip || typeof ip !== 'string') {
+      return '';
+    }
+    return ip.toLowerCase().trim().split('/')[0];
+  }, []);
 
   const applyMockData = useCallback(() => {
     setDevices(mockDevices);
@@ -152,11 +163,34 @@ const AppContent: React.FC = () => {
     const map: Record<string, CredentialRecord> = {};
     credentials.forEach((credential) => {
       if (credential.ip) {
-        map[credential.ip] = credential;
+        const key = normalizeIp(credential.ip);
+        if (key) {
+          map[key] = credential;
+        }
       }
     });
     return map;
-  }, [credentials]);
+  }, [credentials, normalizeIp]);
+
+  const findCredentialForDevice = useCallback(
+    (device: DeviceRecord): CredentialRecord | undefined => {
+      const primaryKey = normalizeIp(device.primaryIp);
+      if (primaryKey && credentialMap[primaryKey]) {
+        return credentialMap[primaryKey];
+      }
+
+      const interfaceKey = device.interfaces
+        .map((iface) => normalizeIp(iface.ip_address))
+        .find((key) => key && credentialMap[key]);
+
+      if (interfaceKey) {
+        return credentialMap[interfaceKey];
+      }
+
+      return undefined;
+    },
+    [credentialMap, normalizeIp]
+  );
 
   // Helper to resolve which IP we should associate with this device.
   const resolveDeviceIp = useCallback(
@@ -195,12 +229,35 @@ const AppContent: React.FC = () => {
     [resolveDeviceIp]
   );
 
+  const detectVendorForDevice = useCallback(
+    (device: DeviceRecord): 'cisco' | 'juniper' | null => {
+      const credential = findCredentialForDevice(device);
+      const type = credential?.device_type?.toLowerCase?.() ?? '';
+
+      if (type.includes('cisco')) {
+        return 'cisco';
+      }
+      if (type.includes('juniper')) {
+        return 'juniper';
+      }
+      return null;
+    },
+    [findCredentialForDevice]
+  );
+
   // Filtering happens entirely in memory – no extra backend calls.
   const filteredDevices = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
     return devices.filter((device) => {
       if (statusFilter !== 'all' && deriveDeviceStatus(device) !== statusFilter) {
+        return false;
+      }
+
+      if (
+        vendorFilter !== 'all' &&
+        detectVendorForDevice(device) !== vendorFilter
+      ) {
         return false;
       }
 
@@ -214,7 +271,7 @@ const AppContent: React.FC = () => {
         : false;
       return hostnameMatch || ipMatch;
     });
-  }, [devices, searchTerm, statusFilter]);
+  }, [devices, searchTerm, statusFilter, vendorFilter, detectVendorForDevice]);
 
   // Sidebar counts update automatically whenever the devices array changes.
   const sidebarCounts = useMemo(() => {
@@ -239,9 +296,33 @@ const AppContent: React.FC = () => {
     return counts;
   }, [devices]);
 
+  const vendorCounts = useMemo(
+    () =>
+      devices.reduce(
+        (totals, device) => {
+          const vendor = detectVendorForDevice(device);
+          if (vendor === 'cisco') {
+            totals.cisco += 1;
+          } else if (vendor === 'juniper') {
+            totals.juniper += 1;
+          }
+          return totals;
+        },
+        { cisco: 0, juniper: 0 }
+      ),
+    [devices, detectVendorForDevice]
+  );
+
   const handleStatusFilterChange = useCallback(
     (status: DeviceStatus | 'all') => {
       setStatusFilter((current) => (current === status ? 'all' : status));
+    },
+    []
+  );
+
+  const handleVendorFilterChange = useCallback(
+    (vendor: 'cisco' | 'juniper') => {
+      setVendorFilter((current) => (current === vendor ? 'all' : vendor));
     },
     []
   );
@@ -328,11 +409,8 @@ const AppContent: React.FC = () => {
     if (!selectedDevice) {
       return undefined;
     }
-    if (selectedDevice.primaryIp) {
-      return credentialMap[selectedDevice.primaryIp];
-    }
-    return undefined;
-  }, [selectedDevice, credentialMap]);
+    return findCredentialForDevice(selectedDevice);
+  }, [selectedDevice, findCredentialForDevice]);
 
   const selectedDeviceProtocol = useMemo(() => {
     if (!selectedDevice) {
@@ -364,6 +442,9 @@ const AppContent: React.FC = () => {
         counts={sidebarCounts}
         selectedStatus={statusFilter}
         onSelectStatus={handleStatusFilterChange}
+        vendorCounts={vendorCounts}
+        selectedVendor={vendorFilter}
+        onSelectVendor={handleVendorFilterChange}
       />
 
       <main className="main-content">
@@ -375,7 +456,7 @@ const AppContent: React.FC = () => {
         {!isLoading && (
           <DeviceList
             devices={filteredDevices}
-            credentialMap={credentialMap}
+            findCredentialForDevice={findCredentialForDevice}
             getProtocolForDevice={getProtocolForDevice}
             onSelectDevice={(device) => setSelectedDevice(device)}
             onRefreshDevice={handleDeviceRefresh}
