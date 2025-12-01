@@ -13,6 +13,15 @@ interface SettingsModalProps {
   onViewModeChange: (mode: DeviceViewMode) => void;
   useMockData: boolean;
   onUseMockDataChange: (enabled: boolean) => void;
+  autoUpdateDeviceInterval: number;
+  onAutoUpdateDeviceIntervalChange: (value: number) => void;
+  autoUpdateMbpsInterval: number;
+  onAutoUpdateMbpsIntervalChange: (value: number) => void;
+  autoUpdateMethod: ProtocolMethod;
+  onAutoUpdateMethodChange: (method: ProtocolMethod) => void;
+  onStartAutoUpdate: () => Promise<void> | void;
+  autoUpdateMessage: string | null;
+  isStartingAutoUpdate: boolean;
 }
 
 // Modal that groups together app-wide settings: theme toggle, preferred update
@@ -26,6 +35,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onViewModeChange,
   useMockData,
   onUseMockDataChange,
+  autoUpdateDeviceInterval,
+  onAutoUpdateDeviceIntervalChange,
+  autoUpdateMbpsInterval,
+  onAutoUpdateMbpsIntervalChange,
+  autoUpdateMethod,
+  onAutoUpdateMethodChange,
+  onStartAutoUpdate,
+  autoUpdateMessage,
+  isStartingAutoUpdate,
 }) => {
   const { theme, toggleTheme } = useTheme();
 
@@ -88,6 +106,77 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             />
             CLI
           </label>
+        </section>
+        <section className="modal-section">
+          <h3>Automatic Updates</h3>
+          <p>Kick off the backend job that keeps devices refreshed on a schedule.</p>
+          <div
+            className="modal-choice-row"
+            role="group"
+            aria-label="Automatic update protocol"
+          >
+            <span className="modal-choice-row__label">Protocol</span>
+            <div className="modal-choice-row__options">
+              <button
+                type="button"
+                className={`pill-toggle ${autoUpdateMethod === 'snmp' ? 'pill-toggle--active' : ''}`}
+                onClick={() => onAutoUpdateMethodChange('snmp')}
+              >
+                SNMP
+              </button>
+              <button
+                type="button"
+                className={`pill-toggle ${autoUpdateMethod === 'cli' ? 'pill-toggle--active' : ''}`}
+                onClick={() => onAutoUpdateMethodChange('cli')}
+              >
+                CLI
+              </button>
+            </div>
+          </div>
+          <div className="modal-form">
+            <label>
+              Device interval (seconds)
+              <input
+                type="number"
+                min="0"
+                value={autoUpdateDeviceInterval}
+                onChange={(event) =>
+                  onAutoUpdateDeviceIntervalChange(
+                    Math.max(
+                      0,
+                      Number.parseInt(event.target.value, 10) || 0
+                    )
+                  )
+                }
+              />
+            </label>
+            <label>
+              Mbps interval (seconds)
+              <input
+                type="number"
+                min="0"
+                value={autoUpdateMbpsInterval}
+                onChange={(event) =>
+                  onAutoUpdateMbpsIntervalChange(
+                    Math.max(
+                      0,
+                      Number.parseInt(event.target.value, 10) || 0
+                    )
+                  )
+                }
+              />
+            </label>
+            <button
+              type="button"
+              onClick={onStartAutoUpdate}
+              disabled={isStartingAutoUpdate}
+            >
+              {isStartingAutoUpdate ? 'Starting…' : 'Start automatic updates'}
+            </button>
+            {autoUpdateMessage && (
+              <p className="modal-message">{autoUpdateMessage}</p>
+            )}
+          </div>
         </section>
         <section className="modal-section">
           <h3>Device List Layout</h3>
