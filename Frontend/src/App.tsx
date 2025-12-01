@@ -23,10 +23,11 @@ import {
 import { mockDevices, mockCredentials } from './mockData';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 
+const DEFAULT_DEVICE_INTERVAL = 3600;
+const DEFAULT_MBPS_INTERVAL = 0;
+const DEFAULT_AUTO_METHOD: ProtocolMethod = 'snmp';
+
 const AppContent: React.FC = () => {
-  const START_PROGRAM_DEVICE_INTERVAL = 3600;
-  const START_PROGRAM_MBPS_INTERVAL = 0;
-  const START_PROGRAM_METHOD: ProtocolMethod = 'snmp';
 
   // Stores the full list of devices returned by GET /devices/get_all.
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
@@ -59,6 +60,18 @@ const AppContent: React.FC = () => {
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   // Current sidebar status filter; "all" shows every device.
   const [statusFilter, setStatusFilter] = useState<DeviceStatus | 'all'>('all');
+  // Automatic update scheduler settings for /devices/start_program.
+  const [autoUpdateDeviceInterval, setAutoUpdateDeviceInterval] =
+    useState<number>(DEFAULT_DEVICE_INTERVAL);
+  const [autoUpdateMbpsInterval, setAutoUpdateMbpsInterval] = useState<number>(
+    DEFAULT_MBPS_INTERVAL
+  );
+  const [autoUpdateMethod, setAutoUpdateMethod] =
+    useState<ProtocolMethod>(DEFAULT_AUTO_METHOD);
+  const [autoUpdateMessage, setAutoUpdateMessage] = useState<string | null>(
+    null
+  );
+  const [isStartingAutoUpdate, setIsStartingAutoUpdate] = useState(false);
 
   const { theme } = useTheme();
 
@@ -142,17 +155,34 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     startProgram(
-      START_PROGRAM_DEVICE_INTERVAL,
-      START_PROGRAM_MBPS_INTERVAL,
-      START_PROGRAM_METHOD
+      DEFAULT_DEVICE_INTERVAL,
+      DEFAULT_MBPS_INTERVAL,
+      DEFAULT_AUTO_METHOD
     ).catch((startError) => {
       console.warn('start_program call failed or timed out', startError);
     });
-  }, [
-    START_PROGRAM_DEVICE_INTERVAL,
-    START_PROGRAM_MBPS_INTERVAL,
-    START_PROGRAM_METHOD,
-  ]);
+  }, []);
+
+  const handleStartAutoUpdate = useCallback(async () => {
+    setAutoUpdateMessage(null);
+    setIsStartingAutoUpdate(true);
+    try {
+      await startProgram(
+        autoUpdateDeviceInterval,
+        autoUpdateMbpsInterval,
+        autoUpdateMethod
+      );
+      setAutoUpdateMessage('Automatic updates started.');
+    } catch (startError) {
+      setAutoUpdateMessage(
+        startError instanceof Error
+          ? startError.message
+          : 'Failed to start automatic updates.'
+      );
+    } finally {
+      setIsStartingAutoUpdate(false);
+    }
+  }, [autoUpdateDeviceInterval, autoUpdateMbpsInterval, autoUpdateMethod]);
 
   // Quick lookup by IP so components can easily grab credential info.
   const credentialMap = useMemo(() => {
@@ -436,6 +466,15 @@ const AppContent: React.FC = () => {
         onViewModeChange={setViewMode}
         useMockData={useMockData}
         onUseMockDataChange={handleMockToggle}
+        autoUpdateDeviceInterval={autoUpdateDeviceInterval}
+        onAutoUpdateDeviceIntervalChange={setAutoUpdateDeviceInterval}
+        autoUpdateMbpsInterval={autoUpdateMbpsInterval}
+        onAutoUpdateMbpsIntervalChange={setAutoUpdateMbpsInterval}
+        autoUpdateMethod={autoUpdateMethod}
+        onAutoUpdateMethodChange={setAutoUpdateMethod}
+        onStartAutoUpdate={handleStartAutoUpdate}
+        autoUpdateMessage={autoUpdateMessage}
+        isStartingAutoUpdate={isStartingAutoUpdate}
       />
       <AddDeviceModal
         isOpen={isAddDeviceOpen}
