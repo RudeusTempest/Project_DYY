@@ -236,8 +236,9 @@ class DeviceService:
         try:
             creds = CredentialsService.get_all_cred()
             for cred in creds:
-                if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") and cred.get("snmp_password") is not None:
+                if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
                     await DeviceService.update_device_info_cli(cred)
+                    print("ppppppppppp")
             await asyncio.sleep(device_interval)
         except Exception as e:
             print(f"Error in periodic refresh CLI: {e}")
@@ -325,8 +326,9 @@ class DeviceService:
             try:
                 creds = CredentialsService.get_all_cred()
                 for cred in creds:
-                    snmp_password = cred.pop("snmp_password", None)
-                    await DeviceService.update_mbps_cli(cred)
+                    if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
+                        snmp_password = cred.pop("snmp_password", None)
+                        await DeviceService.update_mbps_cli(cred)
                 await asyncio.sleep(mbps_interval)
             except Exception as e:
                 print(f"Error in update Mbps loop CLI: {e}")

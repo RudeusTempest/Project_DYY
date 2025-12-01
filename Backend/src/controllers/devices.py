@@ -59,6 +59,7 @@ class DeviceController:
     async def update_mbps_loop_cli(mbps_interval: float) -> None:
         await DeviceService.update_mbps_loop_cli(mbps_interval)
 
+
     @staticmethod
     async def main_cli(device_interval, mbps_interval) -> None:
         try:

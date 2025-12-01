@@ -8,4 +8,36 @@ class GroupController:
 
     @staticmethod
     async def add_group(group_name) -> Dict[str, Any]:
-        return GroupService.add_group(group_name)
+        return await GroupService.add_group(group_name)
+
+
+    @staticmethod
+    async def assign_device_to_group(device_mac: str, group_name: str) -> Dict[str, Any]:
+        return await GroupService.assign_device_to_group(device_mac, group_name)
+    
+
+    @staticmethod
+    async def get_all_groups() -> List[Dict[str, Any]]:
+        return await GroupService.get_all_groups() 
+    
+
+    @staticmethod
+    async def get_one_group(group_name: str) -> Optional[Dict[str, Any]]:
+        return await GroupService.get_one_group(group_name) 
+    
+
+    @staticmethod
+    async def delete_device_from_group(device_mac: str, group_name: str) -> Dict[str, Any]:
+        return await GroupService.delete_device_from_group(device_mac, group_name) 
+    
+
+    # @staticmethod
+    # async def delete_group(group_name: str) -> Dict[str, Any]:
+    #     # Before deleting the group, remove all devices from the group
+    #     group = await GroupService.get_one_group(group_name)
+    #     if group and "device_macs" in group:
+    #         device_macs = group["device_macs"]
+    #         for device_mac in device_macs:
+    #             await GroupService.delete_device_from_group(device_mac, group_name)
+        
+    #     return await DevicesRepo.delete_group(group_name)
