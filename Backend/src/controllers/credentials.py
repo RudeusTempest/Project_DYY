@@ -7,7 +7,7 @@ class CredentialsController:
     
     @staticmethod
     def add_device_cred(cred: device_cred) -> None:
-        CredentialsService.add_device_cred(cred)
+        return CredentialsService.add_device_cred(cred)
 
 
     @staticmethod

@@ -7,7 +7,7 @@ class CredentialsService:
 
     @staticmethod
     def add_device_cred(device_cred: device_cred) -> None:
-        CredentialsRepo.add_device_cred(device_cred.model_dump())
+        return CredentialsRepo.add_device_cred(device_cred.model_dump())
 
 
     @staticmethod

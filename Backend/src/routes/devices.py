@@ -32,11 +32,11 @@ async def get_one_record(ip: str) -> List[Dict[str, Any]]:
 async def refresh_by_ip(ip: str, method: str = "snmp") -> Dict[str, Any]:
     try:
         result = await DeviceController.refresh_by_ip(ip, method=method)
-        if result is None:
-            raise HTTPException(status_code=404, detail=f"Device not found or refresh failed for IP: {ip}")
-        return {"success": result}
-    except HTTPException:
-        raise
+        # if result.get("success") is False:
+            # raise HTTPException(status_code=404, detail=f"Device not found or refresh failed for IP: {ip}")
+        return result
+    except HTTPException as e:
+        return {"success": False, "reason": e.detail}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to refresh device: {str(e)}")
 
@@ -44,8 +44,8 @@ async def refresh_by_ip(ip: str, method: str = "snmp") -> Dict[str, Any]:
 @router.put("/start_program")
 async def start_program(device_interval, mbps_interval, method: str = "snmp" ) -> None:
     if method == "snmp":
-        asyncio.run((DeviceController.main_snmp(device_interval, mbps_interval)))
+        await ((DeviceController.main_snmp(device_interval, mbps_interval)))
 
     if method == "cli":
-        asyncio.run((DeviceController.main_cli(device_interval, mbps_interval)))
+        await ((DeviceController.main_cli(device_interval, mbps_interval)))
         
