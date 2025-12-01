@@ -11,6 +11,12 @@ interface HeaderProps {
   isLoading: boolean;
   onOpenSettings: () => void;
   onOpenAddDevice: () => void;
+  groupOptions: string[];
+  selectedGroup: string;
+  onGroupChange: (group: string) => void;
+  deviceTypeOptions: string[];
+  selectedDeviceType: string;
+  onDeviceTypeChange: (deviceType: string) => void;
 }
 
 // The header stays fixed at the top and exposes the global actions (search,
@@ -24,6 +30,12 @@ const Header: React.FC<HeaderProps> = ({
   isLoading,
   onOpenSettings,
   onOpenAddDevice,
+  groupOptions,
+  selectedGroup,
+  onGroupChange,
+  deviceTypeOptions,
+  selectedDeviceType,
+  onDeviceTypeChange,
 }) => {
   return (
     <header className="header">
@@ -42,26 +54,63 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header__actions">
-        <input
-          className="header__search"
-          type="text"
-          placeholder="Search by hostname or IP..."
-          value={searchTerm}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-        <button
-          className="header__refresh-button"
-          onClick={onRefreshAll}
-          disabled={isRefreshing || isLoading}
-        >
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
-        <button className="header__add-device-button" onClick={onOpenAddDevice}>
-          Add Device
-        </button>
-        <button className="header__settings-button" onClick={onOpenSettings}>
-          Settings
-        </button>
+        <div className="header__filters">
+          <input
+            className="header__search"
+            type="text"
+            placeholder="Search by hostname or IP..."
+            value={searchTerm}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+          <select
+            className="header__select"
+            value={selectedGroup}
+            onChange={(event) => onGroupChange(event.target.value)}
+            aria-label="Filter by group"
+          >
+            <option value="all">All groups</option>
+            {groupOptions.map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+          <select
+            className="header__select"
+            value={selectedDeviceType}
+            onChange={(event) => onDeviceTypeChange(event.target.value)}
+            aria-label="Filter by device type"
+          >
+            <option value="all">All device types</option>
+            {deviceTypeOptions.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="header__buttons">
+          <button
+            className="header__refresh-button"
+            onClick={onRefreshAll}
+            disabled={isRefreshing || isLoading}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            className="header__add-device-button"
+            onClick={onOpenAddDevice}
+          >
+            Add Device
+          </button>
+          <button
+            className="header__settings-button"
+            onClick={onOpenSettings}
+          >
+            Settings
+          </button>
+        </div>
       </div>
     </header>
   );
