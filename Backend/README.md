@@ -6,19 +6,69 @@ A full-stack application for monitoring network devices with a React frontend an
 
 ```
 Project_DYY/
-├── Backend/           # FastAPI backend
-│   └── app/
-│       ├── A_Connection.py
-│       ├── B_Extraction.py
-│       ├── C_Database.py
-│       ├── D_FastAPI.py
-│       └── Main.py
-└── Frontend/          # React frontend
-    ├── src/
-    │   ├── App.tsx
-    │   ├── App.css
-    │   └── data.ts
-    └── package.json
+├── Backend/                          # FastAPI backend
+│   ├── .gitignore
+│   ├── copilot changes.md
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── venv/
+│   └── src/
+│       ├── __init__.py
+│       ├── main.py
+│       ├── __pycache__/
+│
+│       ├── config/
+│       │   ├── __pycache__/
+│       │   └── database.py
+│
+│       ├── controllers/
+│       │   ├── __pycache__/
+│       │   ├── control.py
+│       │   ├── credentials.py
+│       │   └── devices.py
+│
+│       ├── middleware/
+│       │   ├── __pycache__/
+│       │   └── cors.py
+│
+│       ├── models/
+│       │   ├── __pycache__/
+│       │   ├── credential.py
+│       │   └── device.py
+│
+│       ├── repositories/
+│       │   ├── __pycache__/
+│       │   ├── credentials.py
+│       │   └── devices.py
+│
+│       ├── routes/
+│       │   ├── __pycache__/
+│       │   ├── credentials.py
+│       │   └── devices.py
+│
+│       ├── services/
+│       │   ├── __pycache__/
+│       │   ├── connection.py
+│       │   ├── credentials.py
+│       │   ├── device.py
+│       │   └── extraction.py
+│
+│       ├── tests/
+│       │   ├── __pycache__/
+│       │   └── test1.py
+│
+│       └── utils/
+│           ├── bandwidth.py
+│           ├── datetime.py
+│           ├── network_parsers.py
+│           └── snmp.py
+│
+└── Frontend/                         # React frontend
+    ├── package.json
+    └── src/
+        ├── App.tsx
+        ├── App.css
+        └── data.ts
 ```
 
 

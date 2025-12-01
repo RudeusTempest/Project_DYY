@@ -16,7 +16,7 @@ class DeviceService:
             connection = ConnectionService.connect(cred)
             if not connection:
                 print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
-                return False
+                return {"success": False, "reason": f"Failed to connect to device {cred.get('ip', 'unknown')}"}
             
             if "cisco" in cred["device_type"]:
                 print("Updating Cisco device:", cred["ip"])
@@ -28,7 +28,7 @@ class DeviceService:
 
                 if outputs is None:
                     print(f"Failed to get outputs from device {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to get outputs from device {cred['ip']}"}
                     
                 hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = outputs
                 print("Received outputs")
@@ -36,7 +36,7 @@ class DeviceService:
                 extraction_result = ExtractionService.extract_cisco(cred["device_type"], mac_output, hostname_output, ip_output, info_neighbors_output)
                 if extraction_result is None:
                     print(f"Failed to extract data from device {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to extract data from device {cred['ip']}"}
                     
                 mac_address, hostname, interface_data, info_neighbors = extraction_result
                 print("Extracted data")
@@ -44,7 +44,7 @@ class DeviceService:
                 interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
                 if interface_indexes is None:
                     print(f"Failed to get interface indexes for {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to get interface indexes for {cred['ip']}"}
 
                 for interface_dict in interface_data:
                     if interface_dict["interface"] not in interface_indexes:
@@ -66,7 +66,7 @@ class DeviceService:
                     
                 DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
                 print("Saved to DB")
-                return True
+                return  {"success": True}
 
             elif "juniper" in cred["device_type"]:
                 print("Updating Juniper device:", cred["ip"])
@@ -78,7 +78,7 @@ class DeviceService:
 
                 if outputs is None:
                     print(f"Failed to get outputs from device {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to get device outputs for {cred['ip']}"}
                     
                 hostname_output, ip_output, mac_output, last_updated, raw_date = outputs
                 print("Received outputs")
@@ -86,7 +86,7 @@ class DeviceService:
                 extraction_result = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
                 if extraction_result is None:
                     print(f"Failed to extract data from device {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to extract data from device {cred['ip']}"}
                     
                 mac_address, hostname, interface_data = extraction_result
                 print("Extracted data")
@@ -94,7 +94,7 @@ class DeviceService:
                 interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
                 if interface_indexes is None:
                     print(f"Failed to get interface indexes for {cred['ip']}")
-                    return False
+                    return {"success": False, "reason": f"Failed to get interface indexes for {cred['ip']}"}
 
                 for interface_dict in interface_data:
                     if interface_dict["interface"] not in interface_indexes:
@@ -115,14 +115,15 @@ class DeviceService:
                     print(f"interface {interface_dict['interface']}: done")
                     
                 DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
-                return True
+                return {"success": True}
+
             else:
                 print(f"Unsupported device type: {cred.get('device_type', 'unknown')}")
-                return False
+                return {"success": False, "reason": f"Unsupported device type: {cred.get('device_type', 'unknown')}"}
                 
         except Exception as e:
             print(f"Error updating device {cred.get('ip', 'unknown')}: {e}")
-            return False
+            return {"success": False, "reason": f"Error connecting to {cred.get('ip', 'unknown')}: {str(e)}"}
 
 
     @staticmethod
@@ -157,17 +158,17 @@ class DeviceService:
             cred = CredentialsService.get_one_cred(ip)
             if not cred:
                 print(f"No credentials found for IP {ip}")
-                return False
+                return {"success": False, "reason": f"No credentials found for IP {ip}"}
             if method == "snmp":
                 return await DeviceService.update_device_info_snmp(cred)
             elif method == "cli":
                 return await DeviceService.update_device_info_cli(cred)
             else:
                 print(f"Unknown method: {method}")
-                return False
+                return {"success": False, "reason": f"Unknown refresh method: {method}"}
         except Exception as e:
             print(f"Error refreshing device {ip}: {e}")
-            return False
+            return {"success": False, "reason": f"Error refreshing device {ip}: {e}"}
 
 
     @staticmethod
@@ -250,7 +251,7 @@ class DeviceService:
             connection = ConnectionService.connect(cred)
 
             if not connection:
-                return None
+                return {"success": False, "reason": f"Failed to connect to device {cred.get('ip', 'unknown')}"}
 
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
@@ -260,7 +261,7 @@ class DeviceService:
                 
                 if outputs is None:
                     print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
-                    return None
+                    return {"success": False, "reason": f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}"}
                     
                 hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date = outputs
                 
@@ -274,7 +275,7 @@ class DeviceService:
                 )
                 if extraction_result is None:
                     print(f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}")
-                    return None
+                    return {"success": False, "reason": f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}"}
                     
                 mac_address, hostname, interface_data, info_neighbors = extraction_result
                 
@@ -289,7 +290,7 @@ class DeviceService:
 
                 if outputs is None:
                     print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
-                    return None
+                    return {"success": False, "reason": f"Failed to get outputs from device {cred['ip']}"}
                     
                 hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date = outputs
                 
@@ -302,7 +303,7 @@ class DeviceService:
                 )
                 if extraction_result is None:
                     print(f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}")
-                    return None
+                    return {"success": False, "reason": f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}"}
                     
                 mac_address, hostname, interface_data = extraction_result
                 
@@ -311,11 +312,11 @@ class DeviceService:
             if connection:
                 connection.disconnect()
             
-            return True
+            return {"success": True}
             
         except Exception as e:
             print(f"Error updating device CLI {cred.get('ip', 'unknown')}: {e}")
-            return None
+            return {"success": False, "reason": f"Error updating device CLI {cred.get('ip', 'unknown')}: {e}"}
 
 
     @staticmethod

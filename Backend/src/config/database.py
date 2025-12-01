@@ -14,5 +14,12 @@ except Exception as e:
     print(f"Unexpected error connecting to MongoDB: {e}")
     raise
 
+
 # Create database 
 db = client["projectDYY"]
+
+# Create collections
+cred_collection = db["devices_cred"]
+info_collection = db["devices_info"]
+archive = db["archive"]
+groups_collection = db["groups"]

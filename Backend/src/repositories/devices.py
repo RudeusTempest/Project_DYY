@@ -1,11 +1,8 @@
-from src.config.database import db
-from src.repositories.credentials import CredentialsRepo
+from src.config.database import info_collection, archive
 from typing import Optional, List, Dict, Any
 
 
-# Create collections
-info_collection = db["devices_info"]
-archive = db["archive"]
+
 
 
 class DevicesRepo:

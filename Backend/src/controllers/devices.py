@@ -2,6 +2,7 @@ from src.services.device import DeviceService
 from src.repositories.devices import DevicesRepo
 from typing import Optional, List, Dict, Any
 import asyncio
+from fastapi import HTTPException
 
 class DeviceController:
 
@@ -42,7 +43,7 @@ class DeviceController:
                 )
         except Exception as e:
             print(f"Error in main_snmp: {e}")
-            raise
+            raise HTTPException(status_code=500, detail=f"Error in main_snmp: {str(e)}")
 
 
 
@@ -68,4 +69,4 @@ class DeviceController:
                 )
         except Exception as e:
             print(f"Error in main_cli: {e}")
-            raise    
+            raise HTTPException(status_code=500, detail=f"Error in main_cli: {str(e)}")

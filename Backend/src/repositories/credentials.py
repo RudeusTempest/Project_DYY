@@ -1,8 +1,8 @@
-from src.config.database import db
+from src.config.database import cred_collection
 from typing import Optional, List, Dict, Any
 
 
-cred_collection = db["devices_cred"]
+
 
 
 class CredentialsRepo:  
@@ -13,7 +13,7 @@ class CredentialsRepo:
             cred_collection.insert_one(cred)
         except Exception as e:
             print(f"Error adding device credentials: {e}")
-            raise
+            return {"success": False, "reason": f"Error adding device credentials: {e}"}
 
 
     @staticmethod
