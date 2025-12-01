@@ -59,10 +59,6 @@ const AppContent: React.FC = () => {
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   // Current sidebar status filter; "all" shows every device.
   const [statusFilter, setStatusFilter] = useState<DeviceStatus | 'all'>('all');
-  // Current vendor filter; "all" shows every device regardless of platform.
-  const [vendorFilter, setVendorFilter] = useState<'all' | 'cisco' | 'juniper'>(
-    'all'
-  );
 
   const { theme } = useTheme();
 
@@ -229,35 +225,12 @@ const AppContent: React.FC = () => {
     [resolveDeviceIp]
   );
 
-  const detectVendorForDevice = useCallback(
-    (device: DeviceRecord): 'cisco' | 'juniper' | null => {
-      const credential = findCredentialForDevice(device);
-      const type = credential?.device_type?.toLowerCase?.() ?? '';
-
-      if (type.includes('cisco')) {
-        return 'cisco';
-      }
-      if (type.includes('juniper')) {
-        return 'juniper';
-      }
-      return null;
-    },
-    [findCredentialForDevice]
-  );
-
   // Filtering happens entirely in memory – no extra backend calls.
   const filteredDevices = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
     return devices.filter((device) => {
       if (statusFilter !== 'all' && deriveDeviceStatus(device) !== statusFilter) {
-        return false;
-      }
-
-      if (
-        vendorFilter !== 'all' &&
-        detectVendorForDevice(device) !== vendorFilter
-      ) {
         return false;
       }
 
@@ -271,7 +244,7 @@ const AppContent: React.FC = () => {
         : false;
       return hostnameMatch || ipMatch;
     });
-  }, [devices, searchTerm, statusFilter, vendorFilter, detectVendorForDevice]);
+  }, [devices, searchTerm, statusFilter]);
 
   // Sidebar counts update automatically whenever the devices array changes.
   const sidebarCounts = useMemo(() => {
@@ -296,33 +269,9 @@ const AppContent: React.FC = () => {
     return counts;
   }, [devices]);
 
-  const vendorCounts = useMemo(
-    () =>
-      devices.reduce(
-        (totals, device) => {
-          const vendor = detectVendorForDevice(device);
-          if (vendor === 'cisco') {
-            totals.cisco += 1;
-          } else if (vendor === 'juniper') {
-            totals.juniper += 1;
-          }
-          return totals;
-        },
-        { cisco: 0, juniper: 0 }
-      ),
-    [devices, detectVendorForDevice]
-  );
-
   const handleStatusFilterChange = useCallback(
     (status: DeviceStatus | 'all') => {
       setStatusFilter((current) => (current === status ? 'all' : status));
-    },
-    []
-  );
-
-  const handleVendorFilterChange = useCallback(
-    (vendor: 'cisco' | 'juniper') => {
-      setVendorFilter((current) => (current === vendor ? 'all' : vendor));
     },
     []
   );
@@ -442,9 +391,6 @@ const AppContent: React.FC = () => {
         counts={sidebarCounts}
         selectedStatus={statusFilter}
         onSelectStatus={handleStatusFilterChange}
-        vendorCounts={vendorCounts}
-        selectedVendor={vendorFilter}
-        onSelectVendor={handleVendorFilterChange}
       />
 
       <main className="main-content">

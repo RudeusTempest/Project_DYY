@@ -9,18 +9,10 @@ interface SidebarCounts {
   unauthorized: number;
 }
 
-interface SidebarVendorCounts {
-  cisco: number;
-  juniper: number;
-}
-
 interface SidebarProps {
   counts: SidebarCounts;
   selectedStatus: DeviceStatus | 'all';
   onSelectStatus: (status: DeviceStatus | 'all') => void;
-  vendorCounts: SidebarVendorCounts;
-  selectedVendor: 'all' | 'cisco' | 'juniper';
-  onSelectVendor: (vendor: 'cisco' | 'juniper') => void;
 }
 
 // Simple fixed sidebar that displays how many devices fall into each status and
@@ -30,9 +22,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   counts,
   selectedStatus,
   onSelectStatus,
-  vendorCounts,
-  selectedVendor,
-  onSelectVendor,
 }) => {
   const renderItem = (
     label: string,
@@ -60,30 +49,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   };
 
-  const renderVendorItem = (
-    label: string,
-    value: number,
-    vendor: 'cisco' | 'juniper'
-  ) => {
-    const isSelected = selectedVendor === vendor;
-
-    return (
-      <li>
-        <button
-          type="button"
-          className={`sidebar__item sidebar__item--vendor sidebar__item--${vendor} ${
-            isSelected ? 'sidebar__item--selected' : ''
-          }`}
-          onClick={() => onSelectVendor(vendor)}
-          aria-pressed={isSelected}
-        >
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </button>
-      </li>
-    );
-  };
-
   return (
     <aside className="sidebar">
       <h2 className="sidebar__title">Devices</h2>
@@ -92,11 +57,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         {renderItem('Active Devices', counts.active, 'active')}
         {renderItem('Inactive Devices', counts.inactive, 'inactive')}
         {renderItem('Unauthorized Devices', counts.unauthorized, 'unauthorized')}
-      </ul>
-      <h3 className="sidebar__subtitle">Vendor</h3>
-      <ul className="sidebar__list sidebar__list--vendors">
-        {renderVendorItem('Cisco Devices', vendorCounts.cisco, 'cisco')}
-        {renderVendorItem('Juniper Devices', vendorCounts.juniper, 'juniper')}
       </ul>
     </aside>
   );
