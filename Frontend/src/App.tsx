@@ -24,6 +24,10 @@ import {
   fetchAllGroups,
   fetchGroupWithMembers,
   GroupWithMembers,
+  addGroup,
+  assignDeviceToGroup,
+  deleteDeviceFromGroup,
+  deleteGroup,
 } from './api/groups';
 import { mockDevices, mockCredentials } from './mockData';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
@@ -102,7 +106,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   const loadGroupsWithMembers = useCallback(
-    async (): Promise<GroupWithMembers[]> => {
+    async (silentOnError = true): Promise<GroupWithMembers[]> => {
       try {
         const summaries = await fetchAllGroups();
         if (!Array.isArray(summaries) || summaries.length === 0) {
@@ -146,6 +150,11 @@ const AppContent: React.FC = () => {
           }));
       } catch (groupError) {
         console.warn('Failed to load groups', groupError);
+        if (!silentOnError) {
+          throw groupError instanceof Error
+            ? groupError
+            : new Error('Failed to load groups');
+        }
         return [];
       }
     },
@@ -575,6 +584,84 @@ const AppContent: React.FC = () => {
     }
   }, [reloadDevicesAndCredentials]);
 
+  const ensureGroupActionsAllowed = useCallback(() => {
+    if (useMockData) {
+      throw new Error('Group management is disabled while showing mock data.');
+    }
+  }, [useMockData]);
+
+  const reloadGroupsOnly = useCallback(async () => {
+    ensureGroupActionsAllowed();
+    const latestGroups = await loadGroupsWithMembers(false);
+    setGroups(latestGroups);
+  }, [ensureGroupActionsAllowed, loadGroupsWithMembers]);
+
+  const handleAddGroup = useCallback(
+    async (groupName: string, deviceMacs: string[]) => {
+      ensureGroupActionsAllowed();
+      const cleanName = groupName.trim();
+      if (!cleanName) {
+        throw new Error('Group name is required.');
+      }
+
+      const cleanMacs = deviceMacs
+        .map((mac) => mac.trim())
+        .filter((mac) => mac.length > 0);
+
+      await addGroup({ group: cleanName, device_macs: cleanMacs });
+      const latestGroups = await loadGroupsWithMembers(false);
+      setGroups(latestGroups);
+    },
+    [ensureGroupActionsAllowed, loadGroupsWithMembers]
+  );
+
+  const handleAssignDeviceToGroup = useCallback(
+    async (groupName: string, deviceMac: string) => {
+      ensureGroupActionsAllowed();
+      const cleanName = groupName.trim();
+      const cleanMac = deviceMac.trim();
+      if (!cleanName || !cleanMac) {
+        throw new Error('Group name and device MAC are required.');
+      }
+
+      await assignDeviceToGroup(cleanMac, cleanName);
+      const latestGroups = await loadGroupsWithMembers(false);
+      setGroups(latestGroups);
+    },
+    [ensureGroupActionsAllowed, loadGroupsWithMembers]
+  );
+
+  const handleRemoveDeviceFromGroup = useCallback(
+    async (groupName: string, deviceMac: string) => {
+      ensureGroupActionsAllowed();
+      const cleanName = groupName.trim();
+      const cleanMac = deviceMac.trim();
+      if (!cleanName || !cleanMac) {
+        throw new Error('Group name and device MAC are required.');
+      }
+
+      await deleteDeviceFromGroup(cleanMac, cleanName);
+      const latestGroups = await loadGroupsWithMembers(false);
+      setGroups(latestGroups);
+    },
+    [ensureGroupActionsAllowed, loadGroupsWithMembers]
+  );
+
+  const handleDeleteGroup = useCallback(
+    async (groupName: string) => {
+      ensureGroupActionsAllowed();
+      const cleanName = groupName.trim();
+      if (!cleanName) {
+        throw new Error('Group name is required.');
+      }
+
+      await deleteGroup(cleanName);
+      const latestGroups = await loadGroupsWithMembers(false);
+      setGroups(latestGroups);
+    },
+    [ensureGroupActionsAllowed, loadGroupsWithMembers]
+  );
+
   const credentialForSelectedDevice = useMemo(() => {
     if (!selectedDevice) {
       return undefined;
@@ -679,6 +766,12 @@ const AppContent: React.FC = () => {
         onStartAutoUpdate={handleStartAutoUpdate}
         autoUpdateMessage={autoUpdateMessage}
         isStartingAutoUpdate={isStartingAutoUpdate}
+        groups={groups}
+        onReloadGroups={reloadGroupsOnly}
+        onAddGroup={handleAddGroup}
+        onAssignDeviceToGroup={handleAssignDeviceToGroup}
+        onRemoveDeviceFromGroup={handleRemoveDeviceFromGroup}
+        onDeleteGroup={handleDeleteGroup}
       />
       <AddDeviceModal
         isOpen={isAddDeviceOpen}
