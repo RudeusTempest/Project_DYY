@@ -7,8 +7,14 @@ class GroupsRepo:
     @staticmethod
     def add_group(group_name: dict) -> Dict[str, Any]:
         try:
+            # check if group already exists (e.g. by name)
+            existing = groups_collection.find_one({"group": group_name.get("group")})
+            if existing:
+                return {"success": False, "reason": "Group already exists"}
+
             groups_collection.insert_one(group_name)
-            return {"success": True, "message": "Group added successfully"}     
+            return {"success": True, "message": "Group added successfully"}
+
         except Exception as e:
             print(f"Error adding group: {e}")
             return {"success": False, "reason": f"Error adding group: {e}"}
@@ -63,6 +69,26 @@ class GroupsRepo:
             print(f"Error deleting device from group: {e}")
             return {"success": False, "reason": f"Error deleting device from group: {e}"}
     
+
+    @staticmethod
+    def delete_group(group_name: str) -> Dict[str, Any]:
+        try:
+            result = groups_collection.delete_one({"group": group_name})
+            if result.deleted_count == 0:
+                return {"success": False, "reason": "Group not found"}
+            return {"success": True, "message": "Group deleted successfully"}
+        except Exception as e:
+            print(f"Error deleting group: {e}")
+            return {"success": False, "reason": f"Error deleting group: {e}"}
+
+
+
+
+
+
+
+
+
     # @staticmethod
     # def get_all_groups() -> List[Dict[str, Any]]:
     #     try:
