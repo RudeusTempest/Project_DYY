@@ -348,16 +348,16 @@ class ExtractionService:
                         interface_data.append(interface_info)
 
                 info_neighbors = []
-                # lines = info_neighbors_output.splitlines()[1:]  
-                # for line in lines:
-                #     parts = re.split(r"\s{2,}", line.strip())
-                #     if len(parts) >= 3:
-                #         neighbor = {
-                #             "device_id": parts[0],         
-                #             "local_interface": parts[1],   
-                #             "port_id": parts[-1]           
-                #         }
-                #         info_neighbors.append(neighbor)            
+                lines = info_neighbors_output.splitlines()[1:]  
+                for line in lines:
+                    parts = re.split(r"\s{2,}", line.strip())
+                    if len(parts) >= 3:
+                        neighbor = {
+                            "device_id": parts[0],         
+                            "local_interface": parts[1],   
+                            "port_id": parts[-1]           
+                        }
+                        info_neighbors.append(neighbor)            
 
                 return mac_address, hostname, interface_data, info_neighbors
         
@@ -412,16 +412,16 @@ class ExtractionService:
                         interface_data.append(interface_info)
 
                 info_neighbors = []
-                # lines = info_neighbors_output.splitlines()[1:]  
-                # for line in lines:
-                #     parts = re.split(r"\s{2,}", line.strip())
-                #     if len(parts) >= 3:
-                #         neighbor = {
-                #             "device_id": parts[0],         
-                #             "local_interface": parts[1],   
-                #             "port_id": parts[-1]           
-                #         }
-                #         info_neighbors.append(neighbor)
+                lines = info_neighbors_output.splitlines()[1:]  
+                for line in lines:
+                    parts = re.split(r"\s{2,}", line.strip())
+                    if len(parts) >= 3:
+                        neighbor = {
+                            "device_id": parts[0],         
+                            "local_interface": parts[1],   
+                            "port_id": parts[-1]           
+                        }
+                        info_neighbors.append(neighbor)
 
                 return mac_address, hostname, interface_data, info_neighbors 
                

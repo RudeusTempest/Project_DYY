@@ -238,7 +238,6 @@ class DeviceService:
             for cred in creds:
                 if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
                     await DeviceService.update_device_info_cli(cred)
-                    print("ppppppppppp")
             await asyncio.sleep(device_interval)
         except Exception as e:
             print(f"Error in periodic refresh CLI: {e}")
