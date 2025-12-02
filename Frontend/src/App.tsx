@@ -20,6 +20,11 @@ import {
   CredentialRecord,
   fetchAllCredentials,
 } from './api/credentials';
+import {
+  fetchAllGroups,
+  fetchGroupWithMembers,
+  GroupWithMembers,
+} from './api/groups';
 import { mockDevices, mockCredentials } from './mockData';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 
@@ -33,10 +38,17 @@ const AppContent: React.FC = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   // Stores the credential objects returned by GET /credentials/connection_details.
   const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
+  // Stores groups returned by GET /groups/get_all_groups + /groups/one_group.
+  const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   // When true, the UI shows bundled mock data instead of hitting the backend.
   const [useMockData, setUseMockData] = useState(false);
   // Search text typed in the header; we use it to filter the list in-memory.
   const [searchTerm, setSearchTerm] = useState('');
+  // Currently selected group filter ("all" shows every group).
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
+  // Filter devices by device type (as reported in credentials).
+  const [selectedDeviceType, setSelectedDeviceType] =
+    useState<string>('all');
   // Currently selected device for the DeviceDetailsModal.
   const [selectedDevice, setSelectedDevice] = useState<DeviceRecord | null>(
     null
@@ -82,9 +94,68 @@ const AppContent: React.FC = () => {
     return ip.toLowerCase().trim().split('/')[0];
   }, []);
 
+  const normalizeMac = useCallback((mac?: string) => {
+    if (!mac || typeof mac !== 'string') {
+      return '';
+    }
+    return mac.toLowerCase().replace(/[^a-f0-9]/g, '');
+  }, []);
+
+  const loadGroupsWithMembers = useCallback(
+    async (): Promise<GroupWithMembers[]> => {
+      try {
+        const summaries = await fetchAllGroups();
+        if (!Array.isArray(summaries) || summaries.length === 0) {
+          return [];
+        }
+
+        const detailedGroups = await Promise.all(
+          summaries.map(async (group) => {
+            if (!group?.group) {
+              return null;
+            }
+
+            if (Array.isArray((group as GroupWithMembers).device_macs)) {
+              return {
+                group: group.group,
+                device_macs: (group as GroupWithMembers).device_macs ?? [],
+              };
+            }
+
+            const details = await fetchGroupWithMembers(group.group).catch(() => null);
+            const deviceMacs =
+              details && Array.isArray(details.device_macs)
+                ? details.device_macs
+                : [];
+
+            return {
+              group: group.group,
+              device_macs: deviceMacs,
+            };
+          })
+        );
+
+        return detailedGroups
+          .filter(
+            (group): group is GroupWithMembers =>
+              Boolean(group && group.group)
+          )
+          .map((group) => ({
+            group: group.group,
+            device_macs: group.device_macs ?? [],
+          }));
+      } catch (groupError) {
+        console.warn('Failed to load groups', groupError);
+        return [];
+      }
+    },
+    []
+  );
+
   const applyMockData = useCallback(() => {
     setDevices(mockDevices);
     setCredentials(mockCredentials);
+    setGroups([]);
   }, []);
 
   // Fetch devices and credentials at the same time when the app starts.
@@ -92,13 +163,15 @@ const AppContent: React.FC = () => {
     async (forceMock = useMockData) => {
       if (forceMock) {
         applyMockData();
+        setGroups([]);
         setError('Showing mock data (backend calls disabled).');
         return;
       }
 
-      const [deviceData, credentialData] = await Promise.all([
+      const [deviceData, credentialData, groupData] = await Promise.all([
         fetchAllDevices().catch(() => null),
         fetchAllCredentials().catch(() => null),
+        loadGroupsWithMembers(),
       ]);
 
       const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
@@ -108,17 +181,19 @@ const AppContent: React.FC = () => {
       if (hasDevices && hasCredentials) {
         setDevices(deviceData);
         setCredentials(credentialData);
+        setGroups(Array.isArray(groupData) ? groupData : []);
         setError(null);
         return;
       }
 
       applyMockData();
       setUseMockData(true);
+      setGroups([]);
       setError(
         'Using mock data because the API is unavailable or returned no records.'
       );
     },
-    [useMockData, applyMockData]
+    [useMockData, applyMockData, loadGroupsWithMembers]
   );
 
   const loadInitialData = useCallback(async () => {
@@ -198,6 +273,40 @@ const AppContent: React.FC = () => {
     return map;
   }, [credentials, normalizeIp]);
 
+  const availableDeviceTypes = useMemo(() => {
+    const deviceTypes = new Set<string>();
+    credentials.forEach((credential) => {
+      if (credential.device_type) {
+        deviceTypes.add(credential.device_type);
+      }
+    });
+    return Array.from(deviceTypes).sort((a, b) => a.localeCompare(b));
+  }, [credentials]);
+
+  const availableGroupNames = useMemo(
+    () =>
+      groups
+        .map((group) => group.group)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [groups]
+  );
+
+  useEffect(() => {
+    if (
+      selectedDeviceType !== 'all' &&
+      !availableDeviceTypes.includes(selectedDeviceType)
+    ) {
+      setSelectedDeviceType('all');
+    }
+  }, [availableDeviceTypes, selectedDeviceType]);
+
+  useEffect(() => {
+    if (selectedGroup !== 'all' && !availableGroupNames.includes(selectedGroup)) {
+      setSelectedGroup('all');
+    }
+  }, [availableGroupNames, selectedGroup]);
+
   const findCredentialForDevice = useCallback(
     (device: DeviceRecord): CredentialRecord | undefined => {
       const primaryKey = normalizeIp(device.primaryIp);
@@ -237,6 +346,32 @@ const AppContent: React.FC = () => {
     [deviceProtocolOverrides, protocol, resolveDeviceIp]
   );
 
+  const deviceGroupsByMac = useMemo(() => {
+    const mapping: Record<string, string[]> = {};
+
+    groups.forEach((group) => {
+      const groupName = group.group;
+      if (!groupName) {
+        return;
+      }
+
+      (group.device_macs ?? []).forEach((mac) => {
+        const normalizedMac = normalizeMac(mac);
+        if (!normalizedMac) {
+          return;
+        }
+        if (!mapping[normalizedMac]) {
+          mapping[normalizedMac] = [];
+        }
+        if (!mapping[normalizedMac].includes(groupName)) {
+          mapping[normalizedMac].push(groupName);
+        }
+      });
+    });
+
+    return mapping;
+  }, [groups, normalizeMac]);
+
   const handleDeviceProtocolChange = useCallback(
     (
       device: DeviceRecord,
@@ -264,6 +399,22 @@ const AppContent: React.FC = () => {
         return false;
       }
 
+      if (selectedGroup !== 'all') {
+        const groupsForDevice =
+          deviceGroupsByMac[normalizeMac(device.mac)] ?? [];
+        if (!groupsForDevice.includes(selectedGroup)) {
+          return false;
+        }
+      }
+
+      if (selectedDeviceType !== 'all') {
+        const credential = findCredentialForDevice(device);
+        const deviceType = credential?.device_type ?? '';
+        if (deviceType.toLowerCase() !== selectedDeviceType.toLowerCase()) {
+          return false;
+        }
+      }
+
       if (!term) {
         return true;
       }
@@ -274,7 +425,16 @@ const AppContent: React.FC = () => {
         : false;
       return hostnameMatch || ipMatch;
     });
-  }, [devices, searchTerm, statusFilter]);
+  }, [
+    devices,
+    deviceGroupsByMac,
+    findCredentialForDevice,
+    normalizeMac,
+    searchTerm,
+    selectedDeviceType,
+    selectedGroup,
+    statusFilter,
+  ]);
 
   // Sidebar counts update automatically whenever the devices array changes.
   const sidebarCounts = useMemo(() => {
@@ -298,6 +458,37 @@ const AppContent: React.FC = () => {
 
     return counts;
   }, [devices]);
+
+  const sidebarGroupItems = useMemo(() => {
+    if (!groups.length) {
+      return [];
+    }
+
+    const deviceMacs = new Set(
+      devices.map((device) => normalizeMac(device.mac)).filter(Boolean)
+    );
+
+    return groups
+      .map((group) => {
+        const members = Array.isArray(group.device_macs)
+          ? group.device_macs
+          : [];
+        const uniqueMembers = new Set(
+          members.map((mac) => normalizeMac(mac)).filter(Boolean)
+        );
+
+        let count = 0;
+        uniqueMembers.forEach((mac) => {
+          if (deviceMacs.has(mac)) {
+            count += 1;
+          }
+        });
+
+        return { name: group.group, deviceCount: count };
+      })
+      .filter((item) => Boolean(item.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [devices, groups, normalizeMac]);
 
   const handleStatusFilterChange = useCallback(
     (status: DeviceStatus | 'all') => {
@@ -416,11 +607,24 @@ const AppContent: React.FC = () => {
         isLoading={isLoading}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAddDevice={() => setIsAddDeviceOpen(true)}
+        groupOptions={availableGroupNames}
+        selectedGroup={selectedGroup}
+        onGroupChange={setSelectedGroup}
+        deviceTypeOptions={availableDeviceTypes}
+        selectedDeviceType={selectedDeviceType}
+        onDeviceTypeChange={setSelectedDeviceType}
       />
       <Sidebar
         counts={sidebarCounts}
         selectedStatus={statusFilter}
         onSelectStatus={handleStatusFilterChange}
+        groups={sidebarGroupItems}
+        selectedGroup={selectedGroup}
+        onSelectGroup={(groupName) =>
+          setSelectedGroup((current) =>
+            current === groupName ? 'all' : groupName
+          )
+        }
       />
 
       <main className="main-content">

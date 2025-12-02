@@ -40,7 +40,7 @@
 }
 
 .header__search {
-  width: 260px;
+  width: 220px;
   padding: 0.45rem 0.75rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -70,6 +70,27 @@
 .header__refresh-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.header__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header__select {
+  min-width: 150px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.header__buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .header__add-device-button,
