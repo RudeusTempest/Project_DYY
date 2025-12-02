@@ -18,7 +18,8 @@ class DevicesRepo:
                     "interface": interface_data,
                     "info_neighbors": info_neighbors, 
                     "last updated at": last_updated, 
-                    "raw date": raw_date
+                    "raw date": raw_date,
+                    "status": "active"
                     }
             else:
                 latest_device_data = {
@@ -26,7 +27,8 @@ class DevicesRepo:
                     "hostname": hostname, 
                     "interface": interface_data,
                     "last updated at": last_updated, 
-                    "raw date": raw_date
+                    "raw date": raw_date,
+                    "status": "active"
                     }    
 
             # Search if device in info_collection
@@ -88,6 +90,15 @@ class DevicesRepo:
             print(f"Error updating Mbps for IP {ip}: {e}")
 
 
+    @staticmethod
+    def flag_device_inactive(mac_address: str) -> None:
+        try:
+            info_collection.update_one(
+                {"mac": mac_address},
+                {"$set": {"status": "inactive"}}
+            )
+        except Exception as e:
+            print(f"Error flagging device {mac_address} as inactive: {e}")
 
 
 #""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

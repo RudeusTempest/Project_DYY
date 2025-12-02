@@ -12,11 +12,13 @@ class DeviceService:
     async def update_device_info_snmp(cred: dict) -> bool:
         try:
             snmp_password = cred.pop("snmp_password", None)
+            mac_address = cred.pop("mac_address", None)
 
             connection = ConnectionService.connect(cred)
             if not connection:
                 print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
-                return {"success": False, "reason": f"Failed to connect to device {cred.get('ip', 'unknown')}"}
+                DevicesRepo.flag_device_inactive(mac_address)
+                return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
             
             if "cisco" in cred["device_type"]:
                 print("Updating Cisco device:", cred["ip"])
@@ -248,10 +250,13 @@ class DeviceService:
     async def update_device_info_cli(cred: dict) -> Optional[bool]:
         try:
             cred.pop("snmp_password", None)
+            mac_address = cred.pop("mac_address", None)
+            
             connection = ConnectionService.connect(cred)
-
+            
             if not connection:
-                return {"success": False, "reason": f"Failed to connect to device {cred.get('ip', 'unknown')}"}
+                DevicesRepo.flag_device_inactive(mac_address)
+                return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
 
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
