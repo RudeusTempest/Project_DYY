@@ -11,76 +11,35 @@ class DeviceService:
     @staticmethod
     async def update_device_info_snmp(cred: dict) -> bool:
         try:
-            snmp_password = cred.pop("snmp_password", None)
-
-            connection = ConnectionService.connect(cred)
-            if not connection:
-                print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
+            interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], cred["snmp_password"])
+            if interface_indexes is None:
+                print(f"Failed to get interface indexes for {cred['ip']}")
                 return False
             
-            if "cisco" in cred["device_type"]:
-                print("Updating Cisco device:", cred["ip"])
-
-                outputs = ConnectionService.get_cisco_outputs(connection, cred["device_type"])
-                if outputs is None:
-                    print(f"Failed to get outputs from device {cred['ip']}")
-                    return False
+            for interface_dict in interface_data:
+                if interface_dict["interface"] not in interface_indexes:
+                    print(f"Interface {interface_dict['interface']} not found in SNMP indexes")
+                    continue
                     
-                hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = outputs
-                print("Received outputs")
-
-                extraction_result = ExtractionService.extract_cisco(cred["device_type"], mac_output, hostname_output, ip_output, info_neighbors_output)
-                if extraction_result is None:
-                    print(f"Failed to extract data from device {cred['ip']}")
-                    return False
-                    
-                mac_address, hostname, interface_data, info_neighbors = extraction_result
-                print("Extracted data")
-
-                interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
-                if interface_indexes is None:
-                    print(f"Failed to get interface indexes for {cred['ip']}")
-                    return False
-
-                for interface_dict in interface_data:
-                    if interface_dict["interface"] not in interface_indexes:
-                        print(f"Interface {interface_dict['interface']} not found in SNMP indexes")
-                        continue
-                        
-                    max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    interface_dict["max_speed"] = max_speed if max_speed is not None else "Not available"
-                    
-                    mbps_data = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    if mbps_data:
-                        mbps_received, mbps_sent = mbps_data
-                        interface_dict["mbps_received"] = mbps_received
-                        interface_dict["mbps_sent"] = mbps_sent
-                    else:
-                        interface_dict["mbps_received"] = "Not available"
-                        interface_dict["mbps_sent"] = "Not available"
-                    print(f"interface {interface_dict['interface']}: done")
-                    
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
-                print("Saved to DB")
-                return True
+                max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                interface_dict["max_speed"] = max_speed if max_speed is not None else "Not available"
+                
+                mbps_data = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
+                if mbps_data:
+                    mbps_received, mbps_sent = mbps_data
+                    interface_dict["mbps_received"] = mbps_received
+                    interface_dict["mbps_sent"] = mbps_sent
+                else:
+                    interface_dict["mbps_received"] = "Not available"
+                    interface_dict["mbps_sent"] = "Not available"
+                print(f"interface {interface_dict['interface']}: done")
+                
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+            print("Saved to DB")
+            return True
 
             elif "juniper" in cred["device_type"]:
-                print("Updating Juniper device:", cred["ip"])
-                outputs = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
-                if outputs is None:
-                    print(f"Failed to get outputs from device {cred['ip']}")
-                    return False
-                    
-                hostname_output, ip_output, mac_output, last_updated, raw_date = outputs
-                print("Received outputs")
                 
-                extraction_result = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
-                if extraction_result is None:
-                    print(f"Failed to extract data from device {cred['ip']}")
-                    return False
-                    
-                mac_address, hostname, interface_data = extraction_result
-                print("Extracted data")
                 
                 interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
                 if interface_indexes is None:
