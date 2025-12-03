@@ -24,54 +24,17 @@ class ConnectionService:
 
 
     @staticmethod
-    def get_cisco_outputs(net_connect: Any, device_type: str) -> Optional[Tuple[str, str, str, str, str, datetime]]:
+    def get_cisco_outputs_snmp(net_connect: Any, device_type: str) -> Optional[Tuple[str, str, str, str, str, datetime]]:
         try:
             if device_type == "cisco_ios":
-                # Entering enable mode
-                net_connect.enable()
-
-                # Getting commands outputs
-                hostname_output = net_connect.send_command("show running-config | include hostname")
-                ip_output = net_connect.send_command("show ip interface brief")
-
-                # Getting the first interface from the second line of the output
-                lines = ip_output.splitlines()[1:2]
-                if not lines:
-                    print(f"No interface data found for {device_type}")
-                    return None
-                    
-                interface_output = re.match(r"(\S+)\s+", lines[0])
-                interface_0 = interface_output.group(1) if interface_output else "Not found"
-
-                mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
-                raw_date = datetime.now()
-                last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
-
-                info_neighbors_output = net_connect.send_command("show cdp neighbors")
+                
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
         
 
             if device_type == "cisco_xr":
 
-                # Getting commands outputs
-                hostname_output = net_connect.send_command("show running-config | include hostname")
-                ip_output = net_connect.send_command("show ip interface brief")
 
-                # Getting the first interface from the fourth line of the output
-                lines = ip_output.splitlines()[4:5]
-                if not lines:
-                    print(f"No interface data found for {device_type}")
-                    return None
-                    
-                interface_output = re.match(r"(\S+)\s+", lines[0])
-                interface_0 = interface_output.group(1) if interface_output else "Not found"
-
-                mac_output = net_connect.send_command(f"show interfaces {interface_0} | include address")
-                raw_date = datetime.now()
-                last_updated = raw_date.strftime("%d-%m-%Y %H:%M:%S")
-
-                info_neighbors_output = net_connect.send_command("show cdp neighbors")
 
                 return hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date
         except Exception as e:
