@@ -12,116 +12,94 @@ class DeviceService:
     async def update_device_info_snmp(cred: dict) -> bool:
         try:
             snmp_password = cred.pop("snmp_password", None)
-            mac_address = cred.pop("mac_address", None)
+            mac_address_input = cred.pop("mac_address", None)
+            ip = cred.get("ip")
 
-            connection = ConnectionService.connect(cred)
-            if not connection:
-                print(f"Failed to connect to device {cred.get('ip', 'unknown')}")
-                DevicesRepo.flag_device_inactive(mac_address)
-                return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
+            if not snmp_password:
+                print(f"No SNMP password provided for device {ip}")
+                DevicesRepo.flag_device_inactive(mac_address_input)
+                return {"success": False, "reason": f"No SNMP password provided for device {ip}"}
+
+            print(f"Updating device via SNMP: {ip}")
+
+            # Fetch device hostname via SNMP
+            hostname = await ConnectionService.get_hostname(ip, snmp_password)
+            if hostname is None:
+                hostname = "Hostname not found"
+            print(f"Hostname: {hostname}")
+
+            # Fetch interface indexes (returns dict like {interface_name: index, ...})
+            interface_indexes = await ConnectionService.get_interfaces_indexes(ip, snmp_password)
+            if interface_indexes is None or len(interface_indexes) == 0:
+                print(f"Failed to get valid interface indexes for {ip}")
+                DevicesRepo.flag_device_inactive(mac_address_input)
+                return {"success": False, "reason": f"Failed to get valid interface indexes for {ip}"}
+
+            print(f"Found {len(interface_indexes)} valid interfaces")
+
+            # Use MAC address from credentials (ensures consistency with CLI method)
+            # This is the device's unique identifier in the database
+            mac_address = mac_address_input if mac_address_input else "Not found"
+            print(f"MAC Address: {mac_address} (from credentials)")
+
+            # Fetch interface index to IP mapping
+            index_to_ip_mapping = await ConnectionService.get_interface_index_to_ip_mapping(ip, snmp_password)
+            if index_to_ip_mapping is None:
+                index_to_ip_mapping = {}
+
+            # Build interface data using SNMP - only use valid interface names from get_interfaces_indexes
+            interface_data = []
             
-            if "cisco" in cred["device_type"]:
-                print("Updating Cisco device:", cred["ip"])
-
-                outputs = ConnectionService.get_cisco_outputs(connection, cred["device_type"])
-
-                # Close the connection
-                connection.disconnect()
-
-                if outputs is None:
-                    print(f"Failed to get outputs from device {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to get outputs from device {cred['ip']}"}
-                    
-                hostname_output, ip_output, mac_output, info_neighbors_output, last_updated, raw_date = outputs
-                print("Received outputs")
-
-                extraction_result = ExtractionService.extract_cisco(cred["device_type"], mac_output, hostname_output, ip_output, info_neighbors_output)
-                if extraction_result is None:
-                    print(f"Failed to extract data from device {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to extract data from device {cred['ip']}"}
-                    
-                mac_address, hostname, interface_data, info_neighbors = extraction_result
-                print("Extracted data")
-
-                interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
-                if interface_indexes is None:
-                    print(f"Failed to get interface indexes for {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to get interface indexes for {cred['ip']}"}
-
-                for interface_dict in interface_data:
-                    if interface_dict["interface"] not in interface_indexes:
-                        print(f"Interface {interface_dict['interface']} not found in SNMP indexes")
-                        continue
-                        
-                    max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    interface_dict["max_speed"] = max_speed if max_speed is not None else "Not available"
-                    
-                    mbps_data = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    if mbps_data:
-                        mbps_received, mbps_sent = mbps_data
-                        interface_dict["mbps_received"] = mbps_received
-                        interface_dict["mbps_sent"] = mbps_sent
-                    else:
-                        interface_dict["mbps_received"] = "Not available"
-                        interface_dict["mbps_sent"] = "Not available"
-                    print(f"interface {interface_dict['interface']}: done")
-                    
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
-                print("Saved to DB")
-                return  {"success": True}
-
-            elif "juniper" in cred["device_type"]:
-                print("Updating Juniper device:", cred["ip"])
-
-                outputs = ConnectionService.get_juniper_outputs(connection, cred["device_type"])
-
-                # Close the connection
-                connection.disconnect()
-
-                if outputs is None:
-                    print(f"Failed to get outputs from device {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to get device outputs for {cred['ip']}"}
-                    
-                hostname_output, ip_output, mac_output, last_updated, raw_date = outputs
-                print("Received outputs")
+            for interface_name, interface_index in interface_indexes.items():
+                # Get interface admin and operational status
+                admin_status = await ConnectionService.get_interface_admin_status(ip, snmp_password, interface_index)
+                oper_status = await ConnectionService.get_interface_status(ip, snmp_password, interface_index)
                 
-                extraction_result = ExtractionService.extract_juniper(cred["device_type"], hostname_output, ip_output, mac_output)
-                if extraction_result is None:
-                    print(f"Failed to extract data from device {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to extract data from device {cred['ip']}"}
-                    
-                mac_address, hostname, interface_data = extraction_result
-                print("Extracted data")
-                
-                interface_indexes = await ConnectionService.get_interfaces_indexes(cred["ip"], snmp_password)
-                if interface_indexes is None:
-                    print(f"Failed to get interface indexes for {cred['ip']}")
-                    return {"success": False, "reason": f"Failed to get interface indexes for {cred['ip']}"}
+                if admin_status is None:
+                    admin_status = "unknown"
+                if oper_status is None:
+                    oper_status = "unknown"
 
-                for interface_dict in interface_data:
-                    if interface_dict["interface"] not in interface_indexes:
-                        print(f"Interface {interface_dict['interface']} not found in SNMP indexes")
-                        continue
-                        
-                    max_speed = await ConnectionService.get_max_speed(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    interface_dict["max_speed"] = max_speed if max_speed is not None else "Not available"
+                # Get IP address from the mapping
+                ip_address = index_to_ip_mapping.get(interface_index, "Unassigned")
 
-                    mbps_data = await ConnectionService.get_mbps(cred["ip"], snmp_password, interface_indexes[interface_dict["interface"]])
-                    if mbps_data:
-                        mbps_received, mbps_sent = mbps_data
-                        interface_dict["mbps_received"] = mbps_received
-                        interface_dict["mbps_sent"] = mbps_sent
-                    else:
-                        interface_dict["mbps_received"] = "Not available"
-                        interface_dict["mbps_sent"] = "Not available"
-                    print(f"interface {interface_dict['interface']}: done")
-                    
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
-                return {"success": True}
+                # Fetch max speed
+                max_speed = await ConnectionService.get_max_speed(ip, snmp_password, interface_index)
+                max_speed = max_speed if max_speed is not None else "Not available"
 
-            else:
-                print(f"Unsupported device type: {cred.get('device_type', 'unknown')}")
-                return {"success": False, "reason": f"Unsupported device type: {cred.get('device_type', 'unknown')}"}
+                # Fetch Mbps
+                mbps_data = await ConnectionService.get_mbps(ip, snmp_password, interface_index)
+                if mbps_data:
+                    mbps_received, mbps_sent = mbps_data
+                else:
+                    mbps_received = "Not available"
+                    mbps_sent = "Not available"
+
+                interface_data.append({
+                    "interface": interface_name,
+                    "ip_address": ip_address,
+                    "status": f"{admin_status}/{oper_status}",
+                    "max_speed": max_speed,
+                    "mbps_received": mbps_received,
+                    "mbps_sent": mbps_sent
+                })
+
+                print(f"Interface {interface_name} (idx: {interface_index}): {admin_status}/{oper_status}, IP: {ip_address}, Speed: {max_speed} Mbps")
+
+            # Get current timestamp
+            from src.utils.datetime import now_formatted
+            raw_date, last_updated = now_formatted()
+
+            # Save to database
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+            print(f"Successfully updated device {ip} via SNMP and saved to DB")
+            return {"success": True}
+
+        except Exception as e:
+            print(f"Error updating device {cred.get('ip', 'unknown')} via SNMP: {e}")
+            mac_address = cred.get('mac_address', 'unknown')
+            DevicesRepo.flag_device_inactive(mac_address)
+            return {"success": False, "reason": f"Error updating device via SNMP: {str(e)}"}
                 
         except Exception as e:
             print(f"Error updating device {cred.get('ip', 'unknown')}: {e}")
@@ -180,7 +158,11 @@ class DeviceService:
                 creds = CredentialsService.get_all_cred()
                 for cred in creds:
                     if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") and cred.get("snmp_password") is not None:
-                        await DeviceService.update_device_info_snmp(cred)
+                        try:
+                            await DeviceService.update_device_info_snmp(cred)
+                        except Exception as e:
+                            print(f"Error updating device {cred.get('ip')} via SNMP: {e}")
+                            continue
                 await asyncio.sleep(device_interval)
             except Exception as e:
                 print(f"Error in periodic refresh SNMP: {e}")
@@ -235,15 +217,20 @@ class DeviceService:
    
     @staticmethod
     async def periodic_refresh_cli(device_interval: float) -> None:
-        try:
-            creds = CredentialsService.get_all_cred()
-            for cred in creds:
-                if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
-                    await DeviceService.update_device_info_cli(cred)
-            await asyncio.sleep(device_interval)
-        except Exception as e:
-            print(f"Error in periodic refresh CLI: {e}")
-            await asyncio.sleep(device_interval)
+        while True:
+            try:
+                creds = CredentialsService.get_all_cred()
+                for cred in creds:
+                    if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
+                        try:
+                            await DeviceService.update_device_info_cli(cred)
+                        except Exception as e:
+                            print(f"Error updating device {cred.get('ip')} via CLI: {e}")
+                            continue
+                await asyncio.sleep(device_interval)
+            except Exception as e:
+                print(f"Error in periodic refresh CLI: {e}")
+                await asyncio.sleep(device_interval)
 
 
     @staticmethod
