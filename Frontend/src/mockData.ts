@@ -1,4 +1,4 @@
-import { DeviceRecord } from './api/devices';
+import { DeviceRecord, DeviceStatus } from './api/devices';
 import { CredentialRecord } from './api/credentials';
 
 const addBandwidthMetrics = (devices: DeviceRecord[]): DeviceRecord[] =>
@@ -32,7 +32,7 @@ const addBandwidthMetrics = (devices: DeviceRecord[]): DeviceRecord[] =>
     }),
   }));
 
-const baseMockDevices: DeviceRecord[] = [
+const baseMockDevices: Array<Omit<DeviceRecord, 'status'>> = [
   {
     mac: 'a4:5e:60:1a:00:11',
     hostname: 'edge-sw1',
@@ -828,7 +828,36 @@ const baseMockDevices: DeviceRecord[] = [
   },
 ];
 
-export const mockDevices: DeviceRecord[] = addBandwidthMetrics(baseMockDevices);
+const mockStatuses: Record<string, DeviceStatus> = {
+  'edge-sw1': 'active',
+  'agg-sw1': 'active',
+  'dist-rtr1': 'active',
+  'branch-rtr1': 'active',
+  'firewall-1': 'active',
+  'core-sw2': 'active',
+  'branch-sw2': 'active',
+  'dc-leaf1': 'active',
+  'dc-leaf2': 'active',
+  'wireless-ctl1': 'active',
+  'voice-gw1': 'active',
+  'lab-sw1': 'active',
+  'old-core-sw': 'inactive',
+  'branch-rtr2': 'inactive',
+  'dmz-fw2': 'inactive',
+  'access-sw3': 'inactive',
+  'remote-ap1': 'inactive',
+  'test-sensor1': 'inactive',
+  'rogue-sw1': 'unauthorized',
+  'rogue-ap1': 'unauthorized',
+  'quarantined-printer': 'unauthorized',
+};
+
+export const mockDevices: DeviceRecord[] = addBandwidthMetrics(
+  baseMockDevices.map((device) => ({
+    ...device,
+    status: mockStatuses[device.hostname] ?? 'inactive',
+  }))
+);
 
 export const mockCredentials: CredentialRecord[] = [
   { device_type: 'cisco_ios', username: 'netops', password: 'Net0ps!', secret: 'C1sco!23', ip: '10.42.1.10' },

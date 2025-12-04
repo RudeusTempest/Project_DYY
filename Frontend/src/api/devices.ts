@@ -44,6 +44,7 @@ export interface DeviceRecord {
   lastUpdatedAt: string;
   rawDate?: string;
   primaryIp?: string;
+  status: DeviceStatus;
 }
 
 export type DeviceStatus = 'active' | 'inactive' | 'unauthorized';
@@ -193,6 +194,22 @@ const normalizeNeighbor = (rawNeighbor: any, index: number): DeviceNeighbor => {
   return neighbor;
 };
 
+const normalizeDeviceStatus = (rawStatus: any): DeviceStatus => {
+  if (typeof rawStatus === 'string') {
+    const normalized = rawStatus.toLowerCase().trim();
+    if (normalized === 'active' || normalized === 'inactive' || normalized === 'unauthorized') {
+      return normalized;
+    }
+    if (normalized.includes('unauth')) {
+      return 'unauthorized';
+    }
+    if (normalized.includes('active') || normalized.includes('up')) {
+      return 'active';
+    }
+  }
+  return 'inactive';
+};
+
 // The backend uses keys like "last updated at" with spaces; this function
 // creates a much easier to consume object.
 const normalizeDeviceRecord = (rawDevice: any): DeviceRecord => {
@@ -246,6 +263,7 @@ const normalizeDeviceRecord = (rawDevice: any): DeviceRecord => {
     lastUpdatedAt: lastUpdated,
     rawDate: rawDateValue,
     primaryIp,
+    status: normalizeDeviceStatus(rawDevice?.status),
   };
 };
 
@@ -328,33 +346,4 @@ export const startProgram = async (
   } finally {
     clearTimeout(timeoutId);
   }
-};
-
-// Shared helper that assigns a status string so both the sidebar and cards can
-// show consistent colors. The logic is intentionally simple:
-// 1. If any interface mentions "unauth" we treat the device as unauthorized.
-// 2. Else if any interface mentions "up" we treat it as active.
-// 3. Otherwise it is inactive.
-export const deriveDeviceStatus = (device: DeviceRecord): DeviceStatus => {
-  const statuses = device.interfaces.map((iface) =>
-    iface.status?.toLowerCase?.() ?? ''
-  );
-
-  if (statuses.some((status) => status.includes('unauth'))) {
-    return 'unauthorized';
-  }
-
-  if (
-    statuses.some(
-      (status) => status.includes('up/up') || status === 'up' || status === 'up/up '
-    ) ||
-    statuses.some(
-      (status) =>
-        status.includes('up') && !status.includes('down') && !status.includes('shut')
-    )
-  ) {
-    return 'active';
-  }
-
-  return 'inactive';
 };

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import './DeviceDetailsModal.css';
 import {
   DeviceRecord,
-  deriveDeviceStatus,
   ProtocolMethod,
 } from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
@@ -55,7 +54,7 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     return null;
   }
 
-  const status = deriveDeviceStatus(device);
+  const status = device.status;
   const deviceIp = device.primaryIp || credential?.ip;
   const deviceIpLabel = deviceIp || 'Not available';
   const hasDeviceIp = Boolean(deviceIp);

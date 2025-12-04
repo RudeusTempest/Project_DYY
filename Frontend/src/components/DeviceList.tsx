@@ -3,7 +3,6 @@ import './DeviceList.css';
 import DeviceCard from './DeviceCard';
 import {
   DeviceRecord,
-  deriveDeviceStatus,
   ProtocolMethod,
 } from '../api/devices';
 import { CredentialRecord } from '../api/credentials';
@@ -62,7 +61,7 @@ const DeviceList: React.FC<DeviceListProps> = ({
               device={device}
               credential={relatedCredential}
               protocol={protocolForDevice}
-              status={deriveDeviceStatus(device)}
+              status={device.status}
               onSelect={onSelectDevice}
               onRefresh={onRefreshDevice}
             />

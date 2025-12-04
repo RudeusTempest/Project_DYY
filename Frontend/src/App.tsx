@@ -11,7 +11,6 @@ import {
   fetchAllDevices,
   fetchDeviceByIp,
   refreshDeviceByIp,
-  deriveDeviceStatus,
   type DeviceStatus,
   ProtocolMethod,
   startProgram,
@@ -237,16 +236,6 @@ const AppContent: React.FC = () => {
     loadInitialData();
   }, [loadInitialData]);
 
-  useEffect(() => {
-    startProgram(
-      DEFAULT_DEVICE_INTERVAL,
-      DEFAULT_MBPS_INTERVAL,
-      DEFAULT_AUTO_METHOD
-    ).catch((startError) => {
-      console.warn('start_program call failed or timed out', startError);
-    });
-  }, []);
-
   const handleStartAutoUpdate = useCallback(async () => {
     setAutoUpdateMessage(null);
     setIsStartingAutoUpdate(true);
@@ -404,7 +393,7 @@ const AppContent: React.FC = () => {
     const term = searchTerm.toLowerCase().trim();
 
     return devices.filter((device) => {
-      if (statusFilter !== 'all' && deriveDeviceStatus(device) !== statusFilter) {
+      if (statusFilter !== 'all' && device.status !== statusFilter) {
         return false;
       }
 
@@ -455,7 +444,7 @@ const AppContent: React.FC = () => {
     };
 
     devices.forEach((device) => {
-      const status = deriveDeviceStatus(device);
+      const status = device.status;
       if (status === 'active') {
         counts.active += 1;
       } else if (status === 'inactive') {
