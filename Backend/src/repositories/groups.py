@@ -35,15 +35,15 @@ class GroupsRepo:
             return {"success": False, "reason": f"Error assigning device to group: {e}"}
         
 
-    @staticmethod
-    def get_all_groups() -> List[Dict[str, Any]]:
-        try:
-            group_list = list(groups_collection.find({}, {"_id": 0, "device_macs": 0}))
-            return group_list
-        except Exception as e:
-            print(f"Error getting all groups: {e}")
-            return []    
-
+    # @staticmethod
+    # def get_all_groups() -> List[Dict[str, Any]]:
+    #     try:
+    #         group_list = list(groups_collection.find({}, {"_id": 0, "device_macs": 0}))
+    #         return group_list
+    #     except Exception as e:
+    #         print(f"Error getting all groups: {e}")
+    #         return []    
+    
 
     @staticmethod
     def get_one_group(group_name: str) -> Optional[Dict[str, Any]]:
@@ -52,8 +52,20 @@ class GroupsRepo:
             return group
         except Exception as e:
             print(f"Error getting group {group_name}: {e}")
-            return None    
+            return None   
+
+
+    @staticmethod
+    def get_all_groups() -> List[Dict[str, Any]]:
+        try:
+            # Remove "device_macs": 0 to include MAC addresses in results
+            group_list = list(groups_collection.find({}, {"_id": 0}))
+            return group_list
+        except Exception as e:
+            print(f"Error getting all groups: {e}")
+            return [] 
     
+
 
     @staticmethod
     def delete_device_from_group(device_mac: str, group_name: str) -> Dict[str, Any]:
