@@ -2,6 +2,7 @@ const API_BASE_URL = 'http://localhost:8000';
 
 export interface GroupSummary {
   group: string;
+  device_macs?: string[];
 }
 
 export interface GroupWithMembers extends GroupSummary {
@@ -14,7 +15,7 @@ interface GroupActionResponse {
   reason?: string;
 }
 
-export const fetchAllGroups = async (): Promise<GroupSummary[]> => {
+export const fetchAllGroups = async (): Promise<GroupWithMembers[]> => {
   const response = await fetch(`${API_BASE_URL}/groups/get_all_groups`);
   if (!response.ok) {
     throw new Error('Unable to load groups');
@@ -25,7 +26,16 @@ export const fetchAllGroups = async (): Promise<GroupSummary[]> => {
     return [];
   }
 
-  return json as GroupSummary[];
+  return json
+    .filter((item) => Boolean(item && typeof item === 'object' && (item as GroupSummary).group))
+    .map((item) => {
+      const summary = item as GroupSummary;
+      const deviceMacs = Array.isArray(summary.device_macs) ? summary.device_macs : [];
+      return {
+        group: summary.group,
+        device_macs: deviceMacs,
+      };
+    });
 };
 
 export const fetchGroupWithMembers = async (
