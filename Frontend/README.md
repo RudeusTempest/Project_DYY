@@ -5,7 +5,7 @@ This document explains the key frontend files in this project and how they fit t
 ## Quick Mental Model
 
 - The app loads and tries to fetch devices from the backend (`http://localhost:8000`).
-- If the API is unavailable or empty, it falls back to local `mockData` for demo purposes.
+- If the API is unavailable or empty, it shows an error; you can manually switch to local `mockData` in Settings.
 - You can search devices by hostname or IP from the header.
 - The sidebar shows live counts (Total, Active, Inactive, Unauthorized).
 - The main list shows each device with status and a “Refresh” button for that device.
@@ -31,13 +31,13 @@ This document explains the key frontend files in this project and how they fit t
     - `isModalOpen`: Whether the details modal is open.
     - `searchTerm`: The current search text.
     - `loading`: Whether the app is loading data.
-    - `error`: An error message if the API call fails (currently cleared on fallback).
+    - `error`: An error message if the API call fails (cleared once a successful load occurs).
     - `usingMockData`: Whether the UI is showing `mockData` instead of API data.
     - `refreshingIp`: IP of a device currently being refreshed (disables its button).
   - Data fetching:
     - `fetchDevices()` calls `GET /devices/get_all`.
-      - If the response is not OK or returns an empty array, it sets devices from `mockData` and marks `usingMockData = true`.
-      - On success with data, it sets `devices` from the API and `usingMockData = false`.
+      - If the response is not OK or returns an empty array, it shows an error and keeps `usingMockData = false` (no automatic mock fallback).
+      - On success with data, it sets `devices` from the API and `usingMockData = false`. Mock data is only used when you explicitly enable it in Settings.
     - `useEffect(() => { fetchDevices(); }, [])` triggers the fetch on first render.
   - Filtering:
     - Converts `searchTerm`, each hostname, and each interface IP to lowercase and checks for inclusion.
@@ -59,7 +59,7 @@ This document explains the key frontend files in this project and how they fit t
     - Note: `"last updated at"` can be a simple string or an object with `$date` (e.g., Mongo-like format). Components handle both.
 
 - `src/data.ts`
-  - Exports `mockData` — a sample array of `NetworkDevice` used as a fallback.
+  - Exports `mockData` — a sample array of `NetworkDevice` you can manually switch to in Settings.
   - Useful for development when the backend isn’t running.
 
 ---
@@ -156,7 +156,7 @@ Tip: If you want to change the layout quickly, try adjusting the CSS variables a
 1. `App` mounts → `fetchDevices()` runs.
 2. Try `GET http://localhost:8000/devices/get_all`.
    - Success with data → show that data.
-   - Error or empty → load `mockData` and show mock banner.
+   - Error or empty → show an error; mock data is not loaded automatically (enable it in Settings if you want the sample data).
 3. As you type in Search (Header), `searchTerm` updates and filters devices by hostname or IP.
 4. Sidebar counts update automatically based on the filtered list.
 5. Device list shows cards; click a card to open the modal with details.
@@ -167,7 +167,7 @@ Tip: If you want to change the layout quickly, try adjusting the CSS variables a
 
 ## Common Gotchas (Beginner Notes)
 
-- CORS/API errors: If the backend isn’t running at `http://localhost:8000`, the app will fall back to `mockData`. That’s expected for development—start the backend to see live data.
+- CORS/API errors: If the backend isn’t running at `http://localhost:8000`, you’ll see an error. Switch to mock data in Settings if you want to keep browsing the sample devices.
 - Date format: `"last updated at"` may be a string or `{ $date }`; formatting is handled in components.
 - Search scope: The filter checks hostname and every interface’s `ip_address` case-insensitively.
 - Unauthorized devices: The UI treats `hostname === "Hostname not found"` as “Unauthorized.”
@@ -190,7 +190,7 @@ Tip: If you want to change the layout quickly, try adjusting the CSS variables a
 - `src/App.tsx` — Main state, data fetching, layout.
 - `src/App.css` — App, header, sidebar, list, modal styles.
 - `src/types.ts` — Shared TypeScript interfaces.
-- `src/data.ts` — Local mock dataset used as fallback.
+- `src/data.ts` — Local mock dataset available when you select Mock data in Settings.
 - `src/components/Header.tsx` — Top bar: logo, title, search, refresh.
 - `src/components/Sidebar.tsx` — Stats panel + mock data banner.
 - `src/components/DeviceList.tsx` — Device cards list + per-device refresh.

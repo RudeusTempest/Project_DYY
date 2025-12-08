@@ -10,8 +10,8 @@ import { mockDevices } from '../mockData';
 
 const MOCK_ERROR_MESSAGE =
   'Showing mock data (backend calls disabled).';
-const FALLBACK_ERROR_MESSAGE =
-  'Using mock data because the API is unavailable or returned no records.';
+const API_ERROR_MESSAGE =
+  'Unable to load devices from the API. Start the backend or switch to mock data in Settings.';
 
 export const useDeviceData = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
@@ -38,13 +38,17 @@ export const useDeviceData = () => {
 
       if (hasDevices) {
         setDevices(deviceData);
+        setUseMockData(false);
         setError(null);
         return;
       }
 
-      applyMockData();
-      setUseMockData(true);
-      setError(FALLBACK_ERROR_MESSAGE);
+      // API call failed or returned no data: do not fall back to mock data
+      // automatically. Surface an error so the user can decide to switch to
+      // mock data from Settings.
+      setUseMockData(false);
+      setDevices([]);
+      setError(API_ERROR_MESSAGE);
     },
     [applyMockData, useMockData]
   );
