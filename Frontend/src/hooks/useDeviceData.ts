@@ -6,11 +6,7 @@ import {
   type DeviceRecord,
   type ProtocolMethod,
 } from '../api/devices';
-import {
-  fetchAllCredentials,
-  type CredentialRecord,
-} from '../api/credentials';
-import { mockCredentials, mockDevices } from '../mockData';
+import { mockDevices } from '../mockData';
 
 const MOCK_ERROR_MESSAGE =
   'Showing mock data (backend calls disabled).';
@@ -19,7 +15,6 @@ const FALLBACK_ERROR_MESSAGE =
 
 export const useDeviceData = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
-  const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
   const [useMockData, setUseMockData] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +22,6 @@ export const useDeviceData = () => {
 
   const applyMockData = useCallback(() => {
     setDevices(mockDevices);
-    setCredentials(mockCredentials);
   }, []);
 
   const reloadDevicesAndCredentials = useCallback(
@@ -38,18 +32,12 @@ export const useDeviceData = () => {
         return;
       }
 
-      const [deviceData, credentialData] = await Promise.all([
-        fetchAllDevices().catch(() => null),
-        fetchAllCredentials().catch(() => null),
-      ]);
+      const deviceData = await fetchAllDevices().catch(() => null);
 
       const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
-      const hasCredentials =
-        Array.isArray(credentialData) && credentialData.length > 0;
 
-      if (hasDevices && hasCredentials) {
+      if (hasDevices) {
         setDevices(deviceData);
-        setCredentials(credentialData);
         setError(null);
         return;
       }
@@ -168,7 +156,6 @@ export const useDeviceData = () => {
 
   return {
     devices,
-    credentials,
     useMockData,
     isLoading,
     error,

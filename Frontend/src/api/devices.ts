@@ -44,6 +44,7 @@ export interface DeviceRecord {
   lastUpdatedAt: string;
   rawDate?: string;
   primaryIp?: string;
+  deviceType?: string;
   status: DeviceStatus;
 }
 
@@ -252,6 +253,13 @@ const normalizeDeviceRecord = (rawDevice: any): DeviceRecord => {
     primaryInterface?.ip_address ||
     (typeof rawDevice?.ip === 'string' ? rawDevice.ip : undefined);
 
+  const deviceType =
+    typeof rawDevice?.device_type === 'string'
+      ? rawDevice.device_type
+      : typeof rawDevice?.deviceType === 'string'
+      ? rawDevice.deviceType
+      : undefined;
+
   return {
     mac: typeof rawDevice?.mac === 'string' ? rawDevice.mac : 'Unknown MAC',
     hostname:
@@ -263,6 +271,7 @@ const normalizeDeviceRecord = (rawDevice: any): DeviceRecord => {
     lastUpdatedAt: lastUpdated,
     rawDate: rawDateValue,
     primaryIp,
+    deviceType,
     status: normalizeDeviceStatus(rawDevice?.status),
   };
 };

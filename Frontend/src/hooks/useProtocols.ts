@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react';
-import { type CredentialRecord } from '../api/credentials';
 import {
   startProgram,
   type DeviceRecord,
@@ -28,8 +27,8 @@ export const useProtocols = () => {
   const [isStartingAutoUpdate, setIsStartingAutoUpdate] = useState(false);
 
   const getProtocolForDevice = useCallback(
-    (device: DeviceRecord, credential?: CredentialRecord): ProtocolMethod => {
-      const deviceIp = resolveDeviceIp(device, credential);
+    (device: DeviceRecord): ProtocolMethod => {
+      const deviceIp = resolveDeviceIp(device);
       if (deviceIp && deviceProtocolOverrides[deviceIp]) {
         return deviceProtocolOverrides[deviceIp];
       }
@@ -39,12 +38,8 @@ export const useProtocols = () => {
   );
 
   const handleDeviceProtocolChange = useCallback(
-    (
-      device: DeviceRecord,
-      credential: CredentialRecord | undefined,
-      method: ProtocolMethod
-    ) => {
-      const deviceIp = resolveDeviceIp(device, credential);
+    (device: DeviceRecord, method: ProtocolMethod) => {
+      const deviceIp = resolveDeviceIp(device);
       if (!deviceIp) {
         return;
       }

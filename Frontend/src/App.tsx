@@ -12,11 +12,7 @@ import { useDeviceData } from './hooks/useDeviceData';
 import { useGroups } from './hooks/useGroups';
 import { useProtocols } from './hooks/useProtocols';
 import { useDeviceFilters } from './hooks/useDeviceFilters';
-import {
-  buildCredentialMap,
-  findCredentialForDevice as findCredentialForDeviceUtil,
-  getAvailableDeviceTypes,
-} from './utils/deviceUtils';
+import { getAvailableDeviceTypes } from './utils/deviceUtils';
 
 const AppContent: React.FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<DeviceRecord | null>(
@@ -29,7 +25,6 @@ const AppContent: React.FC = () => {
 
   const {
     devices,
-    credentials,
     useMockData,
     isLoading,
     error,
@@ -58,20 +53,9 @@ const AppContent: React.FC = () => {
     handleStartAutoUpdate,
   } = useProtocols();
 
-  const credentialMap = useMemo(
-    () => buildCredentialMap(credentials),
-    [credentials]
-  );
-
-  const findCredentialForDevice = useCallback(
-    (device: DeviceRecord) =>
-      findCredentialForDeviceUtil(device, credentialMap),
-    [credentialMap]
-  );
-
   const availableDeviceTypes = useMemo(
-    () => getAvailableDeviceTypes(credentials),
-    [credentials]
+    () => getAvailableDeviceTypes(devices),
+    [devices]
   );
 
   const {
@@ -103,27 +87,14 @@ const AppContent: React.FC = () => {
     deviceGroupsByMac,
     availableGroupNames,
     availableDeviceTypes,
-    findCredentialForDevice,
   });
-
-  const credentialForSelectedDevice = useMemo(() => {
-    if (!selectedDevice) {
-      return undefined;
-    }
-    return findCredentialForDevice(selectedDevice);
-  }, [selectedDevice, findCredentialForDevice]);
 
   const selectedDeviceProtocol = useMemo(() => {
     if (!selectedDevice) {
       return protocol;
     }
-    return getProtocolForDevice(selectedDevice, credentialForSelectedDevice);
-  }, [
-    credentialForSelectedDevice,
-    getProtocolForDevice,
-    protocol,
-    selectedDevice,
-  ]);
+    return getProtocolForDevice(selectedDevice);
+  }, [getProtocolForDevice, protocol, selectedDevice]);
 
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([refreshAllDevices(), refreshGroups()]);
@@ -184,7 +155,6 @@ const AppContent: React.FC = () => {
         {!isLoading && (
           <DeviceList
             devices={filteredDevices}
-            findCredentialForDevice={findCredentialForDevice}
             getProtocolForDevice={getProtocolForDevice}
             onSelectDevice={(device) => setSelectedDevice(device)}
             onRefreshDevice={handleDeviceRefresh}
@@ -195,13 +165,11 @@ const AppContent: React.FC = () => {
 
       <DeviceDetailsModal
         device={selectedDevice}
-        credential={credentialForSelectedDevice}
         protocol={selectedDeviceProtocol}
         onProtocolChange={(method) => {
           if (selectedDevice) {
             handleDeviceProtocolChange(
               selectedDevice,
-              credentialForSelectedDevice,
               method
             );
           }

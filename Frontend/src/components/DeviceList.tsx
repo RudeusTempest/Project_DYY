@@ -5,18 +5,13 @@ import {
   DeviceRecord,
   ProtocolMethod,
 } from '../api/devices';
-import { CredentialRecord } from '../api/credentials';
 
 export type DeviceViewMode = 'gallery' | 'list';
 
 interface DeviceListProps {
   devices: DeviceRecord[];
-  findCredentialForDevice: (
-    device: DeviceRecord
-  ) => CredentialRecord | undefined;
   getProtocolForDevice: (
-    device: DeviceRecord,
-    credential?: CredentialRecord
+    device: DeviceRecord
   ) => ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
@@ -28,7 +23,6 @@ interface DeviceListProps {
 // stays approachable.
 const DeviceList: React.FC<DeviceListProps> = ({
   devices,
-  findCredentialForDevice,
   getProtocolForDevice,
   onSelectDevice,
   onRefreshDevice,
@@ -48,25 +42,16 @@ const DeviceList: React.FC<DeviceListProps> = ({
 
     return (
       <div className={containerClass}>
-        {devices.map((device) => {
-          const relatedCredential = findCredentialForDevice(device);
-          const protocolForDevice = getProtocolForDevice(
-            device,
-            relatedCredential
-          );
-
-          return (
-            <DeviceCard
-              key={`${device.mac}-${device.hostname}`}
-              device={device}
-              credential={relatedCredential}
-              protocol={protocolForDevice}
-              status={device.status}
-              onSelect={onSelectDevice}
-              onRefresh={onRefreshDevice}
-            />
-          );
-        })}
+        {devices.map((device) => (
+          <DeviceCard
+            key={`${device.mac}-${device.hostname}`}
+            device={device}
+            protocol={getProtocolForDevice(device)}
+            status={device.status}
+            onSelect={onSelectDevice}
+            onRefresh={onRefreshDevice}
+          />
+        ))}
       </div>
     );
   };
