@@ -1,11 +1,10 @@
 import React from 'react';
 import './DeviceCard.css';
 import { DeviceRecord, DeviceStatus, ProtocolMethod } from '../api/devices';
-import { CredentialRecord } from '../api/credentials';
+import { resolveDeviceIp } from '../utils/deviceUtils';
 
 interface DeviceCardProps {
   device: DeviceRecord;
-  credential?: CredentialRecord;
   status: DeviceStatus;
   protocol: ProtocolMethod;
   onSelect: (device: DeviceRecord) => void;
@@ -16,14 +15,13 @@ interface DeviceCardProps {
 // update button) opens the detailed modal.
 const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
-  credential,
   status,
   protocol,
   onSelect,
   onRefresh,
 }) => {
   // Prefer the IP reported by the device, otherwise look at the credential.
-  const deviceIp = device.primaryIp || credential?.ip;
+  const deviceIp = resolveDeviceIp(device);
   const totalInterfaces = device.interfaces.length;
   const upInterfaces = device.interfaces.filter((iface) =>
     iface.status?.toLowerCase?.().includes('up')

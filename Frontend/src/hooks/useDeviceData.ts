@@ -6,20 +6,15 @@ import {
   type DeviceRecord,
   type ProtocolMethod,
 } from '../api/devices';
-import {
-  fetchAllCredentials,
-  type CredentialRecord,
-} from '../api/credentials';
-import { mockCredentials, mockDevices } from '../mockData';
+import { mockDevices } from '../mockData';
 
 const MOCK_ERROR_MESSAGE =
   'Showing mock data (backend calls disabled).';
-const FALLBACK_ERROR_MESSAGE =
-  'Using mock data because the API is unavailable or returned no records.';
+const API_ERROR_MESSAGE =
+  'Unable to load devices from the API. Start the backend or switch to mock data in Settings.';
 
 export const useDeviceData = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
-  const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
   const [useMockData, setUseMockData] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +22,6 @@ export const useDeviceData = () => {
 
   const applyMockData = useCallback(() => {
     setDevices(mockDevices);
-    setCredentials(mockCredentials);
   }, []);
 
   const reloadDevicesAndCredentials = useCallback(
@@ -38,25 +32,23 @@ export const useDeviceData = () => {
         return;
       }
 
-      const [deviceData, credentialData] = await Promise.all([
-        fetchAllDevices().catch(() => null),
-        fetchAllCredentials().catch(() => null),
-      ]);
+      const deviceData = await fetchAllDevices().catch(() => null);
 
       const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
-      const hasCredentials =
-        Array.isArray(credentialData) && credentialData.length > 0;
 
-      if (hasDevices && hasCredentials) {
+      if (hasDevices) {
         setDevices(deviceData);
-        setCredentials(credentialData);
+        setUseMockData(false);
         setError(null);
         return;
       }
 
-      applyMockData();
-      setUseMockData(true);
-      setError(FALLBACK_ERROR_MESSAGE);
+      // API call failed or returned no data: do not fall back to mock data
+      // automatically. Surface an error so the user can decide to switch to
+      // mock data from Settings.
+      setUseMockData(false);
+      setDevices([]);
+      setError(API_ERROR_MESSAGE);
     },
     [applyMockData, useMockData]
   );
@@ -168,7 +160,6 @@ export const useDeviceData = () => {
 
   return {
     devices,
-    credentials,
     useMockData,
     isLoading,
     error,

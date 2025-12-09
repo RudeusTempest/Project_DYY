@@ -6,7 +6,6 @@ import {
   deleteDeviceFromGroup,
   deleteGroup,
   fetchAllGroups,
-  fetchGroupWithMembers,
   type GroupWithMembers,
 } from '../api/groups';
 import {
@@ -25,47 +24,19 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
   const loadGroupsWithMembers = useCallback(
     async (silentOnError = true): Promise<GroupWithMembers[]> => {
       try {
-        const summaries = await fetchAllGroups();
-        if (!Array.isArray(summaries) || summaries.length === 0) {
+        const groupsWithMembers = await fetchAllGroups();
+        if (!Array.isArray(groupsWithMembers) || groupsWithMembers.length === 0) {
           return [];
         }
 
-        const detailedGroups = await Promise.all(
-          summaries.map(async (group) => {
-            if (!group?.group) {
-              return null;
-            }
-
-            if (Array.isArray((group as GroupWithMembers).device_macs)) {
-              return {
-                group: group.group,
-                device_macs: (group as GroupWithMembers).device_macs ?? [],
-              };
-            }
-
-            const details = await fetchGroupWithMembers(group.group).catch(
-              () => null
-            );
-            const deviceMacs =
-              details && Array.isArray(details.device_macs)
-                ? details.device_macs
-                : [];
-
-            return {
-              group: group.group,
-              device_macs: deviceMacs,
-            };
-          })
-        );
-
-        return detailedGroups
+        return groupsWithMembers
           .filter(
             (group): group is GroupWithMembers =>
               Boolean(group && group.group)
           )
           .map((group) => ({
             group: group.group,
-            device_macs: group.device_macs ?? [],
+            device_macs: Array.isArray(group.device_macs) ? group.device_macs : [],
           }));
       } catch (groupError) {
         console.warn('Failed to load groups', groupError);

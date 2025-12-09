@@ -1,5 +1,4 @@
 import { type DeviceRecord } from '../api/devices';
-import { type CredentialRecord } from '../api/credentials';
 import { type GroupWithMembers } from '../api/groups';
 
 export const normalizeIp = (ip?: string): string => {
@@ -16,28 +15,11 @@ export const normalizeMac = (mac?: string): string => {
   return mac.toLowerCase().replace(/[^a-f0-9]/g, '');
 };
 
-export const buildCredentialMap = (
-  credentials: CredentialRecord[]
-): Record<string, CredentialRecord> => {
-  const map: Record<string, CredentialRecord> = {};
-  credentials.forEach((credential) => {
-    if (credential.ip) {
-      const key = normalizeIp(credential.ip);
-      if (key) {
-        map[key] = credential;
-      }
-    }
-  });
-  return map;
-};
-
-export const getAvailableDeviceTypes = (
-  credentials: CredentialRecord[]
-): string[] => {
+export const getAvailableDeviceTypes = (devices: DeviceRecord[]): string[] => {
   const deviceTypes = new Set<string>();
-  credentials.forEach((credential) => {
-    if (credential.device_type) {
-      deviceTypes.add(credential.device_type);
+  devices.forEach((device) => {
+    if (device.deviceType) {
+      deviceTypes.add(device.deviceType);
     }
   });
   return Array.from(deviceTypes).sort((a, b) => a.localeCompare(b));
@@ -51,27 +33,14 @@ export const getAvailableGroupNames = (
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 
-export const findCredentialForDevice = (
-  device: DeviceRecord,
-  credentialMap: Record<string, CredentialRecord>
-): CredentialRecord | undefined => {
-  const primaryKey = normalizeIp(device.primaryIp);
-  if (primaryKey && credentialMap[primaryKey]) {
-    return credentialMap[primaryKey];
+export const resolveDeviceIp = (device: DeviceRecord): string | undefined => {
+  if (device.primaryIp) {
+    return normalizeIp(device.primaryIp) || undefined;
   }
 
-  const interfaceKey = device.interfaces
+  const interfaceIp = device.interfaces
     .map((iface) => normalizeIp(iface.ip_address))
-    .find((key) => key && credentialMap[key]);
+    .find((ip) => ip && ip !== 'unassigned' && ip !== 'unknown');
 
-  if (interfaceKey) {
-    return credentialMap[interfaceKey];
-  }
-
-  return undefined;
+  return interfaceIp || undefined;
 };
-
-export const resolveDeviceIp = (
-  device: DeviceRecord,
-  credential?: CredentialRecord
-): string | undefined => device.primaryIp || credential?.ip;

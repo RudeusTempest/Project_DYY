@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { type CredentialRecord } from '../api/credentials';
 import { type DeviceRecord, type DeviceStatus } from '../api/devices';
 import { normalizeMac } from '../utils/deviceUtils';
 
@@ -8,9 +7,6 @@ interface UseDeviceFiltersParams {
   deviceGroupsByMac: Record<string, string[]>;
   availableGroupNames: string[];
   availableDeviceTypes: string[];
-  findCredentialForDevice: (
-    device: DeviceRecord
-  ) => CredentialRecord | undefined;
 }
 
 export const useDeviceFilters = ({
@@ -18,7 +14,6 @@ export const useDeviceFilters = ({
   deviceGroupsByMac,
   availableGroupNames,
   availableDeviceTypes,
-  findCredentialForDevice,
 }: UseDeviceFiltersParams) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
@@ -57,8 +52,7 @@ export const useDeviceFilters = ({
       }
 
       if (selectedDeviceType !== 'all') {
-        const credential = findCredentialForDevice(device);
-        const deviceType = credential?.device_type ?? '';
+        const deviceType = device.deviceType ?? '';
         if (deviceType.toLowerCase() !== selectedDeviceType.toLowerCase()) {
           return false;
         }
@@ -77,7 +71,6 @@ export const useDeviceFilters = ({
   }, [
     devices,
     deviceGroupsByMac,
-    findCredentialForDevice,
     searchTerm,
     selectedDeviceType,
     selectedGroup,
