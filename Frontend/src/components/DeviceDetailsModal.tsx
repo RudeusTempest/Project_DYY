@@ -5,11 +5,13 @@ import {
   ProtocolMethod,
 } from '../api/devices';
 import { resolveDeviceIp } from '../utils/deviceUtils';
+import DeviceGroupsTab from './DeviceGroupsTab';
 
 const stepConfig = [
   { id: 'details', label: 'Details' },
   { id: 'interfaces', label: 'Interfaces' },
   { id: 'ports', label: 'Ports' },
+  { id: 'groups', label: 'Groups' },
 ] as const;
 
 type StepId = (typeof stepConfig)[number]['id'];
@@ -47,20 +49,6 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [device, onClose]);
-
-  if (!device) {
-    return null;
-  }
-
-  const status = device.status;
-  const deviceIp = resolveDeviceIp(device);
-  const deviceIpLabel = deviceIp || 'Not available';
-  const hasDeviceIp = Boolean(deviceIp);
-  const currentStepIndex = stepConfig.findIndex(
-    (step) => step.id === activeStep
-  );
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === stepConfig.length - 1;
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -169,6 +157,20 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
   const formatMtu = (iface: DeviceRecord['interfaces'][number]) =>
     typeof iface.mtu === 'number' ? iface.mtu.toLocaleString() : 'N/A';
+
+  if (!device) {
+    return null;
+  }
+
+  const status = device.status;
+  const deviceIp = resolveDeviceIp(device);
+  const deviceIpLabel = deviceIp || 'Not available';
+  const hasDeviceIp = Boolean(deviceIp);
+  const currentStepIndex = stepConfig.findIndex(
+    (step) => step.id === activeStep
+  );
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === stepConfig.length - 1;
 
   const goToStep = (direction: 'prev' | 'next') => {
     setActiveStep((prev) => {
@@ -351,6 +353,8 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         return renderInterfacesStep();
       case 'ports':
         return renderPortsStep();
+      case 'groups':
+        return <DeviceGroupsTab device={device} />;
       default:
         return renderCredentialsStep();
     }
