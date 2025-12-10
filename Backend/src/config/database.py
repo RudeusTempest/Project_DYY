@@ -1,10 +1,12 @@
+import os
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-# Connect to MongoDB running on localhost (default port 27017)
+# קרא את ה־URI מהסביבה, עם ברירת מחדל ל־mongo:27017
+mongo_url = os.getenv("MONGO_URL", "mongodb://mongo:27017/")
+
 try:
-    client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
-    # Test the connection
+    client = MongoClient(mongo_url, serverSelectionTimeoutMS=5000)
     client.admin.command('ping')
     print("MongoDB connection successful")
 except ConnectionFailure as e:
@@ -14,11 +16,8 @@ except Exception as e:
     print(f"Unexpected error connecting to MongoDB: {e}")
     raise
 
-
-# Create database 
 db = client["projectDYY"]
 
-# Create collections
 cred_collection = db["devices_cred"]
 info_collection = db["devices_info"]
 archive = db["archive"]
