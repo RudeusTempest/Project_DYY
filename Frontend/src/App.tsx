@@ -6,6 +6,7 @@ import DeviceList, { type DeviceViewMode } from './components/DeviceList';
 import DeviceDetailsModal from './components/DeviceDetailsModal';
 import SettingsModal from './components/SettingsModal';
 import AddDeviceModal from './components/AddDeviceModal';
+import GroupSettingsModal from './components/GroupSettingsModal';
 import { type DeviceRecord } from './api/devices';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { useDeviceData } from './hooks/useDeviceData';
@@ -19,6 +20,7 @@ const AppContent: React.FC = () => {
     null
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   const { theme } = useTheme();
@@ -144,6 +146,7 @@ const AppContent: React.FC = () => {
             current === groupName ? 'all' : groupName
           )
         }
+        onOpenGroupSettings={() => setIsGroupSettingsOpen(true)}
       />
 
       <main className="main-content">
@@ -195,6 +198,10 @@ const AppContent: React.FC = () => {
         onStartAutoUpdate={handleStartAutoUpdate}
         autoUpdateMessage={autoUpdateMessage}
         isStartingAutoUpdate={isStartingAutoUpdate}
+      />
+      <GroupSettingsModal
+        isOpen={isGroupSettingsOpen}
+        onClose={() => setIsGroupSettingsOpen(false)}
         groups={groups}
         onReloadGroups={reloadGroupsOnly}
         onAddGroup={handleAddGroup}

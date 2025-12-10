@@ -83,10 +83,36 @@
   color: var(--status-unauthorized);
 }
 
-.sidebar__section-title {
+.sidebar__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 1.5rem 0 0.75rem;
+}
+
+.sidebar__section-title {
+  margin: 0;
   font-size: 1rem;
   color: var(--muted-text);
+}
+
+.sidebar__section-action {
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar__section-action:hover,
+.sidebar__section-action:focus-visible {
+  opacity: 0.85;
+  outline: none;
 }
 
 .sidebar__group-list {
