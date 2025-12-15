@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 class CredentialsController:
     
     @staticmethod
-    def add_device_cred(cred: device_cred) -> None:
+    def add_device_cred(cred: device_cred) -> Dict[str, Any]:
         return CredentialsService.add_device_cred(cred)
 
 

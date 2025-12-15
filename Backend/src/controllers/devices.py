@@ -23,29 +23,24 @@ class DeviceController:
 
     @staticmethod
     async def periodic_refresh_snmp(mbps_interval: float) -> None:
-        return await DeviceService.periodic_refresh_snmp(mbps_interval)
+        await DeviceService.periodic_refresh_snmp(mbps_interval)
 
 
     @staticmethod
     async def update_mbps_loop_snmp(mbps_interval: float) -> None:
-        while True:
-            await DeviceService.update_mbps_snmp()
-            await asyncio.sleep(mbps_interval)
+        await DeviceService.update_mbps_loop_snmp(mbps_interval)
     
 
     @staticmethod
     async def main_snmp(device_interval, mbps_interval) -> None:
         try:
-            while True:
-                await asyncio.gather(
-                    DeviceController.periodic_refresh_snmp(device_interval), 
-                    DeviceController.update_mbps_loop_snmp(mbps_interval)
-                )
+            await asyncio.gather(
+                DeviceController.periodic_refresh_snmp(device_interval), 
+                DeviceController.update_mbps_loop_snmp(mbps_interval)
+            )
         except Exception as e:
             print(f"Error in main_snmp: {e}")
             raise HTTPException(status_code=500, detail=f"Error in main_snmp: {str(e)}")
-
-
 
 
 #""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -63,11 +58,10 @@ class DeviceController:
     @staticmethod
     async def main_cli(device_interval, mbps_interval) -> None:
         try:
-            while True:
-                await asyncio.gather(
-                    DeviceController.periodic_refresh_cli(device_interval), 
-                    DeviceController.update_mbps_loop_cli(mbps_interval)
-                )
+            await asyncio.gather(
+                DeviceController.periodic_refresh_cli(device_interval), 
+                DeviceController.update_mbps_loop_cli(mbps_interval)
+            )
         except Exception as e:
             print(f"Error in main_cli: {e}")
             raise HTTPException(status_code=500, detail=f"Error in main_cli: {str(e)}")

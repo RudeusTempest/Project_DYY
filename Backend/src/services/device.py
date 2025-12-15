@@ -9,7 +9,7 @@ from typing import Optional, Dict, List, Any
 class DeviceService:
  
     @staticmethod
-    async def update_device_info_snmp(cred: dict) -> bool:
+    async def update_device_info_snmp(cred: dict) -> Dict[str, Any]:
         try:
             snmp_password = cred.pop("snmp_password", None)
             mac_address_input = cred.pop("mac_address", None)
@@ -100,10 +100,6 @@ class DeviceService:
             mac_address = cred.get('mac_address', 'unknown')
             DevicesRepo.flag_device_inactive(mac_address)
             return {"success": False, "reason": f"Error updating device via SNMP: {str(e)}"}
-                
-        except Exception as e:
-            print(f"Error updating device {cred.get('ip', 'unknown')}: {e}")
-            return {"success": False, "reason": f"Error connecting to {cred.get('ip', 'unknown')}: {str(e)}"}
 
 
     @staticmethod
@@ -208,7 +204,9 @@ class DeviceService:
 
     @staticmethod
     async def update_mbps_loop_snmp(mbps_interval: float) -> None:
-        await DeviceService.update_mbps_snmp(mbps_interval)
+        while True:
+            await DeviceService.update_mbps_snmp()
+            await asyncio.sleep(mbps_interval)
 
 
 
