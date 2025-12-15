@@ -21,6 +21,7 @@ interface SidebarProps {
   groups: SidebarGroup[];
   selectedGroup: string;
   onSelectGroup: (groupName: string) => void;
+  onOpenGroupSettings: () => void;
 }
 
 // Simple fixed sidebar that displays how many devices fall into each status and
@@ -33,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   groups,
   selectedGroup,
   onSelectGroup,
+  onOpenGroupSettings,
 }) => {
   const renderItem = (
     label: string,
@@ -89,7 +91,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         {renderItem('Unauthorized Devices', counts.unauthorized, 'unauthorized')}
       </ul>
 
-      <h3 className="sidebar__section-title">Groups</h3>
+      <div className="sidebar__section-header">
+        <h3 className="sidebar__section-title">Groups</h3>
+        <button
+          type="button"
+          className="sidebar__section-action"
+          onClick={onOpenGroupSettings}
+          aria-label="Manage groups"
+        >
+          Manage
+        </button>
+      </div>
       {groups.length === 0 ? (
         <p className="sidebar__empty">No groups available</p>
       ) : (

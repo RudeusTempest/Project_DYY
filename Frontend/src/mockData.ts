@@ -1,4 +1,4 @@
-import { DeviceRecord } from './api/devices';
+import { DeviceRecord, DeviceStatus } from './api/devices';
 import { CredentialRecord } from './api/credentials';
 
 const addBandwidthMetrics = (devices: DeviceRecord[]): DeviceRecord[] =>
@@ -32,7 +32,7 @@ const addBandwidthMetrics = (devices: DeviceRecord[]): DeviceRecord[] =>
     }),
   }));
 
-const baseMockDevices: DeviceRecord[] = [
+const baseMockDevices: Array<Omit<DeviceRecord, 'status'>> = [
   {
     mac: 'a4:5e:60:1a:00:11',
     hostname: 'edge-sw1',
@@ -828,31 +828,61 @@ const baseMockDevices: DeviceRecord[] = [
   },
 ];
 
-export const mockDevices: DeviceRecord[] = addBandwidthMetrics(baseMockDevices);
+const mockStatuses: Record<string, DeviceStatus> = {
+  'edge-sw1': 'active',
+  'agg-sw1': 'active',
+  'dist-rtr1': 'active',
+  'branch-rtr1': 'active',
+  'firewall-1': 'active',
+  'core-sw2': 'active',
+  'branch-sw2': 'active',
+  'dc-leaf1': 'active',
+  'dc-leaf2': 'active',
+  'wireless-ctl1': 'active',
+  'voice-gw1': 'active',
+  'lab-sw1': 'active',
+  'old-core-sw': 'inactive',
+  'branch-rtr2': 'inactive',
+  'dmz-fw2': 'inactive',
+  'access-sw3': 'inactive',
+  'remote-ap1': 'inactive',
+  'test-sensor1': 'inactive',
+  'rogue-sw1': 'unauthorized',
+  'rogue-ap1': 'unauthorized',
+  'quarantined-printer': 'unauthorized',
+};
+
+export const mockDevices: DeviceRecord[] = addBandwidthMetrics(
+  baseMockDevices.map((device) => ({
+    ...device,
+    status: mockStatuses[device.hostname] ?? 'inactive',
+  }))
+);
 
 export const mockCredentials: CredentialRecord[] = [
-  { device_type: 'cisco_ios', username: 'netops', password: 'Net0ps!', secret: 'C1sco!23', ip: '10.42.1.10' },
-  { device_type: 'cisco_nxos', username: 'admin', password: 'Nexus#9000', secret: 'NxEnable', ip: '10.42.1.11' },
+  { device_type: 'cisco_ios', username: 'netops', password: 'Net0ps!', secret: 'C1sco!23', ip: '10.42.1.10', mac_address: 'AA:BB:CC:00:00:0A' },
+  { device_type: 'cisco_nxos', username: 'admin', password: 'Nexus#9000', secret: 'NxEnable', ip: '10.42.1.11', mac_address: 'AA:BB:CC:00:00:0B' },
   {
     device_type: 'cisco_iosxe',
     username: 'automation',
     password: 'Aut0mation!',
     secret: 'C1sc0Enable',
     ip: '10.42.1.12',
+    mac_address: 'AA:BB:CC:00:00:0C',
   },
-  { device_type: 'mikrotik', username: 'mtadmin', password: 'm1kroT1k!', ip: '10.42.1.13', snmp_password: 'mtSnmp$' },
-  { device_type: 'cisco_asa', username: 'asaops', password: 'As@Strong!', secret: 'FWsecret!', ip: '10.42.1.14' },
-  { device_type: 'cisco_nxos', username: 'core', password: 'C0reSwitch!', ip: '10.42.1.15', snmp_password: 'SnmpC0re' },
-  { device_type: 'cisco_ios', username: 'field', password: 'Fi3ld!', secret: 'Access!', ip: '10.42.1.16' },
-  { device_type: 'cisco_nxos', username: 'leaf', password: 'LeafPass!1', ip: '10.42.1.17', snmp_password: 'SnmpLeaf1' },
-  { device_type: 'cisco_nxos', username: 'leaf2', password: 'LeafPass!2', ip: '10.42.1.18', snmp_password: 'SnmpLeaf2' },
-  { device_type: 'cisco_iosxe', username: 'wlcadmin', password: 'Wlc#2024', secret: 'WlcSecret', ip: '10.42.1.19' },
-  { device_type: 'cisco_ios', username: 'voiceops', password: 'V01ce!', secret: 'GwSecret', ip: '10.42.1.20' },
-  { device_type: 'cisco_ios', username: 'lab', password: 'LabPass!1', secret: 'LabEnable', ip: '10.42.1.21' },
-  { device_type: 'juniper_junos', username: 'jadmin', password: 'Jun0s!', ip: '10.42.1.22', snmp_password: 'Jun1perSNMP' },
-  { device_type: 'mikrotik', username: 'field2', password: 'M1kro!', ip: '10.42.1.23', snmp_password: 'FieldSnmp' },
-  { device_type: 'cisco_asa', username: 'dmzops', password: 'Dmz!1234', secret: 'DmzSecret', ip: '10.42.1.24' },
-  { device_type: 'cisco_ios', username: 'access', password: 'Acc3ss!', secret: 'AccSecret', ip: '10.42.1.25' },
-  { device_type: 'juniper_junos', username: 'apadmin', password: 'ApAdm1n!', ip: '10.42.1.26', snmp_password: 'ApSnmp' },
-  { device_type: 'mikrotik', username: 'sensor', password: 'Sens0r!', ip: '10.42.1.27', snmp_password: 'SensorSNMP' },
+  { device_type: 'mikrotik', username: 'mtadmin', password: 'm1kroT1k!', ip: '10.42.1.13', snmp_password: 'mtSnmp$', mac_address: 'AA:BB:CC:00:00:0D' },
+  { device_type: 'cisco_asa', username: 'asaops', password: 'As@Strong!', secret: 'FWsecret!', ip: '10.42.1.14', mac_address: 'AA:BB:CC:00:00:0E' },
+  { device_type: 'cisco_nxos', username: 'core', password: 'C0reSwitch!', ip: '10.42.1.15', snmp_password: 'SnmpC0re', mac_address: 'AA:BB:CC:00:00:0F' },
+  { device_type: 'cisco_ios', username: 'field', password: 'Fi3ld!', secret: 'Access!', ip: '10.42.1.16', mac_address: 'AA:BB:CC:00:00:10' },
+  { device_type: 'cisco_nxos', username: 'leaf', password: 'LeafPass!1', ip: '10.42.1.17', snmp_password: 'SnmpLeaf1', mac_address: 'AA:BB:CC:00:00:11' },
+  { device_type: 'cisco_nxos', username: 'leaf2', password: 'LeafPass!2', ip: '10.42.1.18', snmp_password: 'SnmpLeaf2', mac_address: 'AA:BB:CC:00:00:12' },
+  { device_type: 'cisco_iosxe', username: 'wlcadmin', password: 'Wlc#2024', secret: 'WlcSecret', ip: '10.42.1.19', mac_address: 'AA:BB:CC:00:00:13' },
+  { device_type: 'cisco_ios', username: 'voiceops', password: 'V01ce!', secret: 'GwSecret', ip: '10.42.1.20', mac_address: 'AA:BB:CC:00:00:14' },
+  { device_type: 'cisco_ios', username: 'lab', password: 'LabPass!1', secret: 'LabEnable', ip: '10.42.1.21', mac_address: 'AA:BB:CC:00:00:15' },
+  { device_type: 'juniper_junos', username: 'jadmin', password: 'Jun0s!', ip: '10.42.1.22', snmp_password: 'Jun1perSNMP', mac_address: 'AA:BB:CC:00:00:16' },
+  { device_type: 'mikrotik', username: 'field2', password: 'M1kro!', ip: '10.42.1.23', snmp_password: 'FieldSnmp', mac_address: 'AA:BB:CC:00:00:17' },
+  { device_type: 'cisco_asa', username: 'dmzops', password: 'Dmz!1234', secret: 'DmzSecret', ip: '10.42.1.24', mac_address: 'AA:BB:CC:00:00:18' },
+  { device_type: 'cisco_ios', username: 'access', password: 'Acc3ss!', secret: 'AccSecret', ip: '10.42.1.25', mac_address: 'AA:BB:CC:00:00:19' },
+  { device_type: 'juniper_junos', username: 'apadmin', password: 'ApAdm1n!', ip: '10.42.1.26', snmp_password: 'ApSnmp', mac_address: 'AA:BB:CC:00:00:1A' },
+  { device_type: 'mikrotik', username: 'sensor', password: 'Sens0r!', ip: '10.42.1.27', snmp_password: 'SensorSNMP', mac_address: 'AA:BB:CC:00:00:1B' },
 ];

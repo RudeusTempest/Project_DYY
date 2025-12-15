@@ -8,9 +8,9 @@ from typing import Optional, List, Dict, Any
 class DevicesRepo:
 
     @staticmethod
-    def save_info(mac_address: str, hostname: str, interface_data: list, last_updated: str, raw_date: Any, info_neighbors: Optional[list] = None) -> None:
+    def save_info(mac_address: str, hostname: str, interface_data: list, last_updated: str, raw_date: Any, device_type: str = "unknown", info_neighbors: Optional[list] = None) -> None:
         try:
-            # appendig details to a dict
+            # Build device data with device_type included
             if info_neighbors:
                 latest_device_data = {
                     "mac": mac_address,
@@ -19,8 +19,9 @@ class DevicesRepo:
                     "info_neighbors": info_neighbors, 
                     "last updated at": last_updated, 
                     "raw date": raw_date,
+                    "device_type": device_type,  # Store device type in database
                     "status": "active"
-                    }
+                }
             else:
                 latest_device_data = {
                     "mac": mac_address,
@@ -28,15 +29,15 @@ class DevicesRepo:
                     "interface": interface_data,
                     "last updated at": last_updated, 
                     "raw date": raw_date,
+                    "device_type": device_type,  # Store device type in database
                     "status": "active"
-                    }    
+                }    
 
-            # Search if device in info_collection
+            # Search if device exists in info_collection
             device_in_info_collection = info_collection.find_one({"mac": mac_address}, {"_id": 0})
 
             if device_in_info_collection:
                 record = device_in_info_collection
-
                 # Move old record to archive
                 archive.insert_one(record)
                 info_collection.delete_one({"mac": mac_address})
@@ -46,6 +47,7 @@ class DevicesRepo:
         except Exception as e:
             print(f"Error saving device info for MAC {mac_address}: {e}")
             raise
+
 
 
     @staticmethod

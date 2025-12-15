@@ -9,12 +9,14 @@ export interface CredentialRecord {
   password: string;
   secret?: string;
   ip: string;
+  mac_address?: string;
   snmp_password?: string;
 }
 
 export interface AddCredentialPayload {
   device_type: string;
   ip: string;
+  mac_address?: string;
   username: string;
   password: string;
   secret?: string;

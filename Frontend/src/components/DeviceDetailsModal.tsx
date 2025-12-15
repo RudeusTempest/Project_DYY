@@ -2,22 +2,22 @@ import React, { useEffect, useState } from 'react';
 import './DeviceDetailsModal.css';
 import {
   DeviceRecord,
-  deriveDeviceStatus,
   ProtocolMethod,
 } from '../api/devices';
-import { CredentialRecord } from '../api/credentials';
+import { resolveDeviceIp } from '../utils/deviceUtils';
+import DeviceGroupsTab from './DeviceGroupsTab';
 
 const stepConfig = [
-  { id: 'credentials', label: 'Credentials' },
+  { id: 'details', label: 'Details' },
   { id: 'interfaces', label: 'Interfaces' },
   { id: 'ports', label: 'Ports' },
+  { id: 'groups', label: 'Groups' },
 ] as const;
 
 type StepId = (typeof stepConfig)[number]['id'];
 
 interface DeviceDetailsModalProps {
   device: DeviceRecord | null;
-  credential?: CredentialRecord;
   protocol: ProtocolMethod;
   onProtocolChange: (method: ProtocolMethod) => void;
   onClose: () => void;
@@ -27,19 +27,18 @@ interface DeviceDetailsModalProps {
 // scrolling.
 const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   device,
-  credential,
   protocol,
   onProtocolChange,
   onClose,
 }) => {
-  const [activeStep, setActiveStep] = useState<StepId>('credentials');
+  const [activeStep, setActiveStep] = useState<StepId>('details');
 
   useEffect(() => {
     if (typeof window === 'undefined' || !device) {
       return;
     }
 
-    setActiveStep('credentials');
+    setActiveStep('details');
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -50,20 +49,6 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [device, onClose]);
-
-  if (!device) {
-    return null;
-  }
-
-  const status = deriveDeviceStatus(device);
-  const deviceIp = device.primaryIp || credential?.ip;
-  const deviceIpLabel = deviceIp || 'Not available';
-  const hasDeviceIp = Boolean(deviceIp);
-  const currentStepIndex = stepConfig.findIndex(
-    (step) => step.id === activeStep
-  );
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === stepConfig.length - 1;
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -173,6 +158,20 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   const formatMtu = (iface: DeviceRecord['interfaces'][number]) =>
     typeof iface.mtu === 'number' ? iface.mtu.toLocaleString() : 'N/A';
 
+  if (!device) {
+    return null;
+  }
+
+  const status = device.status;
+  const deviceIp = resolveDeviceIp(device);
+  const deviceIpLabel = deviceIp || 'Not available';
+  const hasDeviceIp = Boolean(deviceIp);
+  const currentStepIndex = stepConfig.findIndex(
+    (step) => step.id === activeStep
+  );
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === stepConfig.length - 1;
+
   const goToStep = (direction: 'prev' | 'next') => {
     setActiveStep((prev) => {
       const index = stepConfig.findIndex((step) => step.id === prev);
@@ -241,23 +240,27 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       </div>
 
       <div className="panel">
-        <h3>Credentials</h3>
-        {credential ? (
-          <div className="detail-grid">
-            <div className="detail-item">
-              <span className="detail-label">Device type</span>
-              <strong className="detail-value">{credential.device_type}</strong>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Username</span>
-              <strong className="detail-value">{credential.username}</strong>
-            </div>
+        <h3>Details</h3>
+        <div className="detail-grid">
+          <div className="detail-item">
+            <span className="detail-label">Device type</span>
+            <strong className="detail-value">
+              {device.deviceType ?? 'Unknown'}
+            </strong>
           </div>
-        ) : (
-          <p className="muted-text">
-            No credential information available for this device.
-          </p>
-        )}
+          <div className="detail-item">
+            <span className="detail-label">MAC</span>
+            <strong className="detail-value">{device.mac}</strong>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Primary IP</span>
+            <strong className="detail-value">{deviceIpLabel}</strong>
+          </div>
+          <div className="detail-item">
+            <span className="detail-label">Last updated</span>
+            <strong className="detail-value">{device.lastUpdatedAt}</strong>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -350,6 +353,8 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         return renderInterfacesStep();
       case 'ports':
         return renderPortsStep();
+      case 'groups':
+        return <DeviceGroupsTab device={device} />;
       default:
         return renderCredentialsStep();
     }

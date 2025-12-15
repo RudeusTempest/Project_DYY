@@ -1,3 +1,4 @@
+
 from src.repositories.devices import DevicesRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
@@ -13,6 +14,7 @@ class DeviceService:
         try:
             snmp_password = cred.pop("snmp_password", None)
             mac_address_input = cred.pop("mac_address", None)
+            device_type = cred.get("device_type")  # Extract device type from credentials
             ip = cred.get("ip")
 
             if not snmp_password:
@@ -90,8 +92,8 @@ class DeviceService:
             from src.utils.datetime import now_formatted
             raw_date, last_updated = now_formatted()
 
-            # Save to database
-            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+            # Save to database with device_type
+            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
             print(f"Successfully updated device {ip} via SNMP and saved to DB")
             return {"success": True}
 
@@ -104,15 +106,23 @@ class DeviceService:
 
     @staticmethod
     def get_latest_records() -> List[Dict[str, Any]]:
+        """
+        Retrieve the latest device records from the database.
+        For each unique MAC address, only the most recent record is returned.
+        Device type is already stored in the database, no need to fetch from credentials.
+        """
         try:
             all_records = DevicesRepo.get_all_records()
             latest_records = {}
+            
+            # Keep only the most recent record for each MAC address
             for record in all_records:
                 mac = record.get("mac")
                 raw_date = record.get("raw date")
 
                 if mac and (mac not in latest_records or raw_date > latest_records[mac]["raw date"]):
                     latest_records[mac] = record
+            
             return list(latest_records.values())
         except Exception as e:
             print(f"Error getting latest records: {e}")
@@ -149,6 +159,10 @@ class DeviceService:
 
     @staticmethod
     async def periodic_refresh_snmp(device_interval: float) -> None:
+        """
+        Periodically refresh all devices via SNMP at the specified interval.
+        Only devices with complete SNMP credentials are updated.
+        """
         while True:
             try:
                 creds = CredentialsService.get_all_cred()
@@ -211,10 +225,14 @@ class DeviceService:
 
 
 
-#"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" 
+#""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODS""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" 
    
     @staticmethod
     async def periodic_refresh_cli(device_interval: float) -> None:
+        """
+        Periodically refresh all devices via CLI at the specified interval.
+        Only devices with complete CLI credentials are updated.
+        """
         while True:
             try:
                 creds = CredentialsService.get_all_cred()
@@ -236,6 +254,7 @@ class DeviceService:
         try:
             cred.pop("snmp_password", None)
             mac_address = cred.pop("mac_address", None)
+            device_type = cred.get("device_type")  # Extract device type from credentials
             
             connection = ConnectionService.connect(cred)
             
@@ -269,7 +288,8 @@ class DeviceService:
                     
                 mac_address, hostname, interface_data, info_neighbors = extraction_result
                 
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, info_neighbors)
+                # Save to database with device_type
+                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
                 
 
             elif "juniper" in cred["device_type"]:
@@ -297,7 +317,8 @@ class DeviceService:
                     
                 mac_address, hostname, interface_data = extraction_result
                 
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date)
+                # Save to database with device_type
+                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
 
             if connection:
                 connection.disconnect()
@@ -311,6 +332,9 @@ class DeviceService:
 
     @staticmethod
     async def update_mbps_loop_cli(mbps_interval: float) -> None:
+        """
+        Continuously update bandwidth metrics for all CLI-managed devices at the specified interval.
+        """
         while True:
             try:
                 creds = CredentialsService.get_all_cred()
@@ -374,5 +398,3 @@ class DeviceService:
         except Exception as e:
             print(f"Error updating Mbps CLI for {cred.get('ip', 'unknown')}: {e}")
             return None
-    
-      

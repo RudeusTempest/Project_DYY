@@ -1,0 +1,174 @@
+import { useCallback, useEffect, useState } from 'react';
+import {
+  fetchAllDevices,
+  fetchDeviceByIp,
+  refreshDeviceByIp,
+  type DeviceRecord,
+  type ProtocolMethod,
+} from '../api/devices';
+import { mockDevices } from '../mockData';
+
+const MOCK_ERROR_MESSAGE =
+  'Showing mock data (backend calls disabled).';
+const API_ERROR_MESSAGE =
+  'Unable to load devices from the API. Start the backend or switch to mock data in Settings.';
+
+export const useDeviceData = () => {
+  const [devices, setDevices] = useState<DeviceRecord[]>([]);
+  const [useMockData, setUseMockData] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const applyMockData = useCallback(() => {
+    setDevices(mockDevices);
+  }, []);
+
+  const reloadDevicesAndCredentials = useCallback(
+    async (forceMock = useMockData) => {
+      if (forceMock) {
+        applyMockData();
+        setError(MOCK_ERROR_MESSAGE);
+        return;
+      }
+
+      const deviceData = await fetchAllDevices().catch(() => null);
+
+      const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
+
+      if (hasDevices) {
+        setDevices(deviceData);
+        setUseMockData(false);
+        setError(null);
+        return;
+      }
+
+      // API call failed or returned no data: do not fall back to mock data
+      // automatically. Surface an error so the user can decide to switch to
+      // mock data from Settings.
+      setUseMockData(false);
+      setDevices([]);
+      setError(API_ERROR_MESSAGE);
+    },
+    [applyMockData, useMockData]
+  );
+
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await reloadDevicesAndCredentials();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load initial data.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [reloadDevicesAndCredentials]);
+
+  const handleGlobalRefresh = useCallback(async () => {
+    setError(null);
+    setIsRefreshing(true);
+    try {
+      await reloadDevicesAndCredentials();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to refresh devices.'
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [reloadDevicesAndCredentials]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const refreshDevice = useCallback(
+    async (ip: string, method: ProtocolMethod) => {
+      if (!ip) {
+        return;
+      }
+      if (useMockData) {
+        setError('Refresh is disabled while showing mock data.');
+        return;
+      }
+      setError(null);
+
+      try {
+        await refreshDeviceByIp(ip, method);
+      } catch (refreshError) {
+        setError(
+          refreshError instanceof Error
+            ? refreshError.message
+            : 'Device refresh failed.'
+        );
+        return;
+      }
+
+      try {
+        const updatedDevice = await fetchDeviceByIp(ip);
+        if (updatedDevice) {
+          setDevices((previous) => {
+            const alreadyExists = previous.some(
+              (device) =>
+                device.primaryIp === ip || device.mac === updatedDevice.mac
+            );
+
+            if (alreadyExists) {
+              return previous.map((device) =>
+                device.primaryIp === ip || device.mac === updatedDevice.mac
+                  ? updatedDevice
+                  : device
+              );
+            }
+
+            return [...previous, updatedDevice];
+          });
+          return;
+        }
+      } catch {
+        // If GET /devices/get_one_record fails we silently move on to the
+        // fallback where we reload all devices.
+      }
+
+      try {
+        const latestDevices = await fetchAllDevices();
+        setDevices(latestDevices);
+      } catch (fallbackError) {
+        setError(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : 'Unable to refresh device data.'
+        );
+      }
+    },
+    [useMockData]
+  );
+
+  const handleDeviceAdded = useCallback(async () => {
+    setError(null);
+    try {
+      await reloadDevicesAndCredentials();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to reload devices.'
+      );
+    }
+  }, [reloadDevicesAndCredentials]);
+
+  return {
+    devices,
+    useMockData,
+    isLoading,
+    error,
+    isRefreshing,
+    setUseMockData,
+    setError,
+    reloadDevicesAndCredentials,
+    handleGlobalRefresh,
+    refreshDevice,
+    handleDeviceAdded,
+  };
+};

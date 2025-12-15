@@ -11,6 +11,7 @@ interface AddDeviceModalProps {
 
 type CredentialFormState = {
   device_type: string;
+  mac_address: string;
   ip: string;
   username: string;
   password: string;
@@ -20,6 +21,7 @@ type CredentialFormState = {
 
 const initialFormState: CredentialFormState = {
   device_type: '',
+  mac_address: '',
   ip: '',
   username: '',
   password: '',
@@ -50,8 +52,9 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
     setMessage(null);
+
+    setIsSaving(true);
     try {
       const payload: AddCredentialPayload = {
         device_type: formState.device_type,
@@ -60,6 +63,10 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
         password: formState.password,
       };
 
+      const macAddress = formState.mac_address.trim();
+      if (macAddress) {
+        payload.mac_address = macAddress;
+      }
       if (formState.secret.trim()) {
         payload.secret = formState.secret;
       }
@@ -126,6 +133,14 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
               value={formState.device_type}
               onChange={handleInputChange}
               required
+            />
+          </label>
+          <label>
+            MAC Address (optional)
+            <input
+              name="mac_address"
+              value={formState.mac_address}
+              onChange={handleInputChange}
             />
           </label>
           <label>
