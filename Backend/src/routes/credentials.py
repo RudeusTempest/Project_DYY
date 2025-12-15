@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from src.models.device import device_cred
+from src.models.credential import device_cred
 from src.controllers.credentials import CredentialsController
 from src.controllers.devices import DeviceController
 from typing import List, Dict, Any
