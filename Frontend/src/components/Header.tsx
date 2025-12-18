@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
-import logoLeft from '../logos/erez-logo.svg';
-import logoRight from '../logos/maof-logo.svg';
+import logoLeft from '../logos/EREZ.png';
+import logoRight from '../logos/maof.png';
 
 interface HeaderProps {
   searchTerm: string;
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({
         <img
           src={logoRight}
           alt="Company logo right"
-          className="header__logo"
+          className="header__logo_right"
         />
       </div>
 

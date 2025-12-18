@@ -23,8 +23,13 @@
 .header__logo {
   width: 44px;
   height: 44px;
-  object-fit: cover;
-  border-radius: 8px;
+  
+}
+
+.header__logo_right {
+  width: 56px;
+  height: 44px;
+  
 }
 
 .header__title {
