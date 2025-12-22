@@ -2,8 +2,8 @@ import os
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
-# קרא את ה־URI מהסביבה, עם ברירת מחדל ל־mongo:27017
-mongo_url = os.getenv("MONGO_URL", "mongodb://mongo:27017/")
+# Read Mongo URL from env; default to localhost so devs running outside Docker don't need extra config
+mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
 
 try:
     client = MongoClient(mongo_url, serverSelectionTimeoutMS=5000)
