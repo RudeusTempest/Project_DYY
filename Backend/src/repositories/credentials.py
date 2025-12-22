@@ -8,9 +8,10 @@ from typing import Optional, List, Dict, Any
 class CredentialsRepo:  
 
     @staticmethod
-    def add_device_cred(cred: dict) -> None:
+    def add_device_cred(cred: dict) -> Dict[str, Any]:
         try:
             cred_collection.insert_one(cred)
+            return {"success": True}
         except Exception as e:
             print(f"Error adding device credentials: {e}")
             return {"success": False, "reason": f"Error adding device credentials: {e}"}

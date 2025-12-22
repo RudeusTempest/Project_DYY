@@ -1,12 +1,12 @@
 from src.services.credentials import CredentialsService
-from src.models.device import device_cred
+from src.models.credential import device_cred
 from typing import Optional, List, Dict, Any
 
 
 class CredentialsController:
     
     @staticmethod
-    def add_device_cred(cred: device_cred) -> None:
+    def add_device_cred(cred: device_cred) -> Dict[str, Any]:
         return CredentialsService.add_device_cred(cred)
 
 

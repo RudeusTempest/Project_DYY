@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from src.models.device import device_cred
+from src.models.credential import device_cred
 from src.controllers.credentials import CredentialsController
 from src.controllers.devices import DeviceController
 from typing import List, Dict, Any
@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.post("/add_device")    
-async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, bool]:
+async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, Any]:
     try:
         device_added = CredentialsController.add_device_cred(cred)
         refreshed = await DeviceController.refresh_by_ip(cred.ip, method)

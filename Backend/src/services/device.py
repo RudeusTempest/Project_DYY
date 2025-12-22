@@ -10,7 +10,7 @@ from typing import Optional, Dict, List, Any
 class DeviceService:
  
     @staticmethod
-    async def update_device_info_snmp(cred: dict) -> bool:
+    async def update_device_info_snmp(cred: dict) -> Dict[str, Any]:
         try:
             snmp_password = cred.pop("snmp_password", None)
             mac_address_input = cred.pop("mac_address", None)
@@ -218,7 +218,9 @@ class DeviceService:
 
     @staticmethod
     async def update_mbps_loop_snmp(mbps_interval: float) -> None:
-        await DeviceService.update_mbps_snmp(mbps_interval)
+        while True:
+            await DeviceService.update_mbps_snmp()
+            await asyncio.sleep(mbps_interval)
 
 
 

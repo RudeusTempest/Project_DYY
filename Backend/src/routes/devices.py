@@ -44,8 +44,8 @@ async def refresh_by_ip(ip: str, method: str = "snmp") -> Dict[str, Any]:
 @router.put("/start_program")
 async def start_program(device_interval: int, mbps_interval: int, method: str = "snmp" ) -> None:
     if method == "snmp":
-        await ((DeviceController.main_snmp(device_interval, mbps_interval)))
+        await (DeviceController.main_snmp(device_interval, mbps_interval))
 
-    if method == "cli":
-        await ((DeviceController.main_cli(device_interval, mbps_interval)))
+    elif method == "cli":
+        await (DeviceController.main_cli(device_interval, mbps_interval))
         

@@ -1,12 +1,12 @@
 from src.repositories.credentials import CredentialsRepo
-from src.models.device import device_cred
+from src.models.credential import device_cred
 from typing import Optional, List, Dict, Any
 
 
 class CredentialsService:
 
     @staticmethod
-    def add_device_cred(device_cred: device_cred) -> None:
+    def add_device_cred(device_cred: device_cred) -> Dict[str, Any]:
         return CredentialsRepo.add_device_cred(device_cred.model_dump())
 
 
