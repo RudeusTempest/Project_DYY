@@ -1,10 +1,9 @@
-
-from src.repositories.devices import DevicesRepo
+from src.repositories.mongo.devices import DevicesRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
-import asyncio
 from typing import Optional, Dict, List, Any
+import asyncio
 
 
 class DeviceService:

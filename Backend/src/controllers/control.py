@@ -1,7 +1,5 @@
 from src.controllers.devices import DeviceController
 import asyncio
-from src.services.device import DeviceService
-from src.controllers.credentials import CredentialsController
 
 
 device_interval: int = 3600  # seconds

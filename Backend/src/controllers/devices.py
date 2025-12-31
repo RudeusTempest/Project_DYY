@@ -1,8 +1,8 @@
 from src.services.device import DeviceService
-from src.repositories.devices import DevicesRepo
 from typing import Optional, List, Dict, Any
-import asyncio
 from fastapi import HTTPException
+import asyncio
+
 
 class DeviceController:
 

@@ -1,5 +1,5 @@
 from src.services.credentials import CredentialsService
-from src.models.credential import device_cred
+from src.models.api.credentials import device_cred
 from typing import Optional, List, Dict, Any
 
 

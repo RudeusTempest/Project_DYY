@@ -5,50 +5,66 @@ A full-stack application for monitoring network devices with a React frontend an
 
 ```
 Project_DYY/
+├── docker-compose.yaml
 ├── Backend/                          # FastAPI backend
 │   ├── .gitignore
 │   ├── README.md
 │   ├── requirements.txt
-│   ├── venv/
+│   ├── Dockerfile
 │   └── src/
 │       ├── __init__.py
 │       ├── main.py
 │       ├── __pycache__/
 │
 │       ├── config/
-│       │   ├── __pycache__/
-│       │   └── database.py
+│       │   ├── mongo.py
+│       │   ├── postgres.py
+│       │   └── settings.py
 │
 │       ├── controllers/
-│       │   ├── __pycache__/
 │       │   ├── control.py
 │       │   ├── credentials.py
 │       │   ├── devices.py
 │       │   └── groups.py
 │
+│       ├── db/
+│       │   ├── mongo/
+│       │   │   └── client.py
+│       │   └── postgres/
+│       │       ├── base.py
+│       │       ├── session.py
+│       │       └── migrations/
+│       │           └── alembic.py
+│
 │       ├── middleware/
-│       │   ├── __pycache__/
 │       │   └── cors.py
 │
 │       ├── models/
-│       │   ├── __pycache__/
-│       │   ├── device.py
-│       │   └── groups.py
+│       │   ├── api/
+│       │   │   ├── credentials.py
+│       │   │   ├── device.py
+│       │   │   └── groups.py
+│       │   └── postgres/
+│       │       ├── credentials.py
+│       │       ├── device.py
+│       │       └── groups.py
 │
 │       ├── repositories/
-│       │   ├── __pycache__/
-│       │   ├── credentials.py
-│       │   ├── devices.py
-│       │   └── groups.py
+│       │   ├── mongo/
+│       │   │   ├── credentials.py
+│       │   │   ├── devices.py
+│       │   │   └── groups.py
+│       │   └── postgres/
+│       │       ├── credentials.py
+│       │       ├── devices.py
+│       │       └── groups.py
 │
 │       ├── routes/
-│       │   ├── __pycache__/
 │       │   ├── credentials.py
 │       │   ├── devices.py
 │       │   └── groups.py
 │
 │       ├── services/
-│       │   ├── __pycache__/
 │       │   ├── connection.py
 │       │   ├── credentials.py
 │       │   ├── device.py
@@ -56,7 +72,6 @@ Project_DYY/
 │       │   └── groups.py
 │
 │       ├── tests/
-│       │   ├── __pycache__/
 │       │   └── test1.py
 │
 │       └── utils/
@@ -66,12 +81,16 @@ Project_DYY/
 │           └── snmp.py
 │
 └── Frontend/                         # React frontend
+    ├── Dockerfile
     ├── package.json
     └── src/
+        ├── index.tsx
         ├── App.tsx
         ├── App.css
-        └── data.ts
+        └── mockData.ts
 ```
+
+## Setup Instructions
 
 ## Setup Instructions
 

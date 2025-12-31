@@ -1,8 +1,7 @@
-from src.repositories.groups import GroupsRepo
-import asyncio
+from src.repositories.mongo.groups import GroupsRepo
+from src.models.api.groups import Group
 from typing import Optional, Dict, List, Any
-from src.models.groups import Group
-
+import asyncio
 
 
 class GroupService:

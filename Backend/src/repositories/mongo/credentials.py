@@ -1,8 +1,5 @@
-from src.config.database import cred_collection
+from src.config.mongo import cred_collection
 from typing import Optional, List, Dict, Any
-
-
-
 
 
 class CredentialsRepo:  

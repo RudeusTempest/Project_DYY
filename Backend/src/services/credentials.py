@@ -1,5 +1,5 @@
-from src.repositories.credentials import CredentialsRepo
-from src.models.credential import device_cred
+from src.repositories.mongo.credentials import CredentialsRepo
+from src.models.api.credentials import device_cred
 from typing import Optional, List, Dict, Any
 
 
