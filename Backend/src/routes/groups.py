@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
 from src.controllers.groups import GroupController
+from src.models.api.groups import Group
+from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 import asyncio
-from src.models.groups import Group
 
 
 router = APIRouter()

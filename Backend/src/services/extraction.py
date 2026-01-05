@@ -1,5 +1,5 @@
-import re
 from typing import Optional, Tuple, List, Dict, Any
+import re
 
 
 class ExtractionService:

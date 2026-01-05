@@ -1,19 +1,19 @@
 from src.services.device import DeviceService
-from src.repositories.devices import DevicesRepo
 from typing import Optional, List, Dict, Any
-import asyncio
 from fastapi import HTTPException
+import asyncio
+
 
 class DeviceController:
 
     @staticmethod
-    def get_latest_records() -> List[Dict[str, Any]]:
-        return DeviceService.get_latest_records()
+    async def get_latest_records() -> List[Dict[str, Any]]:
+        return await DeviceService.get_latest_records()
     
 
     @staticmethod
-    def get_one_record(ip: str) -> List[Dict[str, Any]]:
-        return DeviceService.get_one_record(ip)
+    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
+        return await DeviceService.get_one_record(ip)
 
 
     @staticmethod

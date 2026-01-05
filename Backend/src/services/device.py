@@ -1,10 +1,9 @@
-
-from src.repositories.devices import DevicesRepo
+from src.repositories.postgres.devices import DevicesRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
-import asyncio
 from typing import Optional, Dict, List, Any
+import asyncio
 
 
 class DeviceService:
@@ -19,7 +18,7 @@ class DeviceService:
 
             if not snmp_password:
                 print(f"No SNMP password provided for device {ip}")
-                DevicesRepo.flag_device_inactive(mac_address_input)
+                await DevicesRepo.flag_device_inactive(mac_address_input)
                 return {"success": False, "reason": f"No SNMP password provided for device {ip}"}
 
             print(f"Updating device via SNMP: {ip}")
@@ -34,7 +33,7 @@ class DeviceService:
             interface_indexes = await ConnectionService.get_interfaces_indexes(ip, snmp_password)
             if interface_indexes is None or len(interface_indexes) == 0:
                 print(f"Failed to get valid interface indexes for {ip}")
-                DevicesRepo.flag_device_inactive(mac_address_input)
+                await DevicesRepo.flag_device_inactive(mac_address_input)
                 return {"success": False, "reason": f"Failed to get valid interface indexes for {ip}"}
 
             print(f"Found {len(interface_indexes)} valid interfaces")
@@ -93,26 +92,26 @@ class DeviceService:
             raw_date, last_updated = now_formatted()
 
             # Save to database with device_type
-            DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
+            await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
             print(f"Successfully updated device {ip} via SNMP and saved to DB")
             return {"success": True}
 
         except Exception as e:
             print(f"Error updating device {cred.get('ip', 'unknown')} via SNMP: {e}")
             mac_address = cred.get('mac_address', 'unknown')
-            DevicesRepo.flag_device_inactive(mac_address)
+            await DevicesRepo.flag_device_inactive(mac_address)
             return {"success": False, "reason": f"Error updating device via SNMP: {str(e)}"}
 
 
     @staticmethod
-    def get_latest_records() -> List[Dict[str, Any]]:
+    async def get_latest_records() -> List[Dict[str, Any]]:
         """
         Retrieve the latest device records from the database.
         For each unique MAC address, only the most recent record is returned.
         Device type is already stored in the database, no need to fetch from credentials.
         """
         try:
-            all_records = DevicesRepo.get_all_records()
+            all_records = await DevicesRepo.get_all_records()
             latest_records = {}
             
             # Keep only the most recent record for each MAC address
@@ -128,11 +127,10 @@ class DeviceService:
             print(f"Error getting latest records: {e}")
             return []
 
-
     @staticmethod
-    def get_one_record(ip: str) -> List[Dict[str, Any]]:
+    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
         try:
-            return DevicesRepo.get_one_record(ip)
+            return await DevicesRepo.get_one_record(ip)
         except Exception as e:
             print(f"Error getting record for IP {ip}: {e}")
             return []
@@ -141,7 +139,7 @@ class DeviceService:
     @staticmethod
     async def refresh_by_ip(ip: str, method: str) -> Optional[bool]:
         try:
-            cred = CredentialsService.get_one_cred(ip)
+            cred = await CredentialsService.get_one_cred(ip)
             if not cred:
                 print(f"No credentials found for IP {ip}")
                 return {"success": False, "reason": f"No credentials found for IP {ip}"}
@@ -165,7 +163,7 @@ class DeviceService:
         """
         while True:
             try:
-                creds = CredentialsService.get_all_cred()
+                creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") and cred.get("snmp_password") is not None:
                         try:
@@ -182,8 +180,8 @@ class DeviceService:
     @staticmethod
     async def update_mbps_snmp() -> None:
         try:
-            ip_and_snmp_list = CredentialsService.get_all_ip_and_snmp()
-            interface_dicts_list = DevicesRepo.get_interface_data()
+            ip_and_snmp_list = await CredentialsService.get_all_ip_and_snmp()
+            interface_dicts_list = await DevicesRepo.get_interface_data()
             
             for interface_dict in interface_dicts_list:
                 interfaces_data_list = interface_dict.get("interface", [])
@@ -210,7 +208,7 @@ class DeviceService:
                                 print(f"Failed to get Mbps data for {interface_data.get('ip_address')}")
                                 continue
                     
-                            DevicesRepo.update_mbps(interface_data["ip_address"], interface_data["mbps_received"], interface_data["mbps_sent"])
+                            await DevicesRepo.update_mbps(interface_data["ip_address"], interface_data["mbps_received"], interface_data["mbps_sent"])
                             print(f"Updated Mbps for {interface_data.get('ip_address')}")
         except Exception as e:
             print(f"Error updating Mbps SNMP: {e}")
@@ -235,7 +233,7 @@ class DeviceService:
         """
         while True:
             try:
-                creds = CredentialsService.get_all_cred()
+                creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
                         try:
@@ -259,9 +257,8 @@ class DeviceService:
             connection = ConnectionService.connect(cred)
             
             if not connection:
-                DevicesRepo.flag_device_inactive(mac_address)
-                return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
-
+                    await DevicesRepo.flag_device_inactive(mac_address)
+                    return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
                 
@@ -289,7 +286,7 @@ class DeviceService:
                 mac_address, hostname, interface_data, info_neighbors = extraction_result
                 
                 # Save to database with device_type
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
+                await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
                 
 
             elif "juniper" in cred["device_type"]:
@@ -318,7 +315,7 @@ class DeviceService:
                 mac_address, hostname, interface_data = extraction_result
                 
                 # Save to database with device_type
-                DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
+                await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
 
             if connection:
                 connection.disconnect()
@@ -337,7 +334,7 @@ class DeviceService:
         """
         while True:
             try:
-                creds = CredentialsService.get_all_cred()
+                creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     if cred.get("device_type") and cred.get("ip") and cred.get("username") and cred.get("password") is not None:
                         snmp_password = cred.pop("snmp_password", None)
@@ -370,7 +367,7 @@ class DeviceService:
                     print(f"Failed to extract bandwidth data from device {cred.get('ip', 'unknown')}")
                     return None
                     
-                DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_data)
+                await DevicesRepo.update_bandwidth_cli(cred['ip'], all_interfaces_data)
                 return True
             
             elif "juniper" in cred["device_type"]:

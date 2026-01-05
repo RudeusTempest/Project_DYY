@@ -1,4 +1,4 @@
-from src.config.database import groups_collection
+from src.config.mongo import groups_collection
 from typing import Optional, List, Dict, Any
 
 
@@ -65,7 +65,6 @@ class GroupsRepo:
             print(f"Error getting all groups: {e}")
             return [] 
     
-
 
     @staticmethod
     def delete_device_from_group(device_mac: str, group_name: str) -> Dict[str, Any]:
