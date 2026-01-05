@@ -27,11 +27,9 @@ const AppContent: React.FC = () => {
 
   const {
     devices,
-    useMockData,
     isLoading,
     error,
     isRefreshing,
-    setUseMockData,
     reloadDevicesAndCredentials,
     handleGlobalRefresh: refreshAllDevices,
     refreshDevice,
@@ -71,7 +69,7 @@ const AppContent: React.FC = () => {
     handleAssignDeviceToGroup,
     handleRemoveDeviceFromGroup,
     handleDeleteGroup,
-  } = useGroups({ useMockData, devices });
+  } = useGroups({ devices });
 
   const {
     searchTerm,
@@ -101,14 +99,6 @@ const AppContent: React.FC = () => {
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([refreshAllDevices(), refreshGroups()]);
   }, [refreshAllDevices, refreshGroups]);
-
-  const handleMockToggle = useCallback(
-    async (enabled: boolean) => {
-      setUseMockData(enabled);
-      await reloadDevicesAndCredentials(enabled);
-    },
-    [reloadDevicesAndCredentials, setUseMockData]
-  );
 
   const handleDeviceRefresh = useCallback(
     (ip: string) => {
@@ -187,8 +177,6 @@ const AppContent: React.FC = () => {
         onProtocolChange={setProtocol}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        useMockData={useMockData}
-        onUseMockDataChange={handleMockToggle}
         autoUpdateDeviceInterval={autoUpdateDeviceInterval}
         onAutoUpdateDeviceIntervalChange={setAutoUpdateDeviceInterval}
         autoUpdateMbpsInterval={autoUpdateMbpsInterval}

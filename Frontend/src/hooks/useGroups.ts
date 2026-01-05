@@ -14,11 +14,10 @@ import {
 } from '../utils/deviceUtils';
 
 interface UseGroupsParams {
-  useMockData: boolean;
   devices: DeviceRecord[];
 }
 
-export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
+export const useGroups = ({ devices }: UseGroupsParams) => {
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
 
   const loadGroupsWithMembers = useCallback(
@@ -51,22 +50,12 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
     []
   );
 
-  const ensureGroupActionsAllowed = useCallback(() => {
-    if (useMockData) {
-      throw new Error('Group management is disabled while showing mock data.');
-    }
-  }, [useMockData]);
-
   const refreshGroups = useCallback(
     async (silentOnError = true) => {
-      if (useMockData) {
-        setGroups([]);
-        return;
-      }
       const latestGroups = await loadGroupsWithMembers(silentOnError);
       setGroups(latestGroups);
     },
-    [loadGroupsWithMembers, useMockData]
+    [loadGroupsWithMembers]
   );
 
   useEffect(() => {
@@ -74,13 +63,11 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
   }, [refreshGroups]);
 
   const reloadGroupsOnly = useCallback(async () => {
-    ensureGroupActionsAllowed();
     await refreshGroups(false);
-  }, [ensureGroupActionsAllowed, refreshGroups]);
+  }, [refreshGroups]);
 
   const handleAddGroup = useCallback(
     async (groupName: string, deviceMacs: string[]) => {
-      ensureGroupActionsAllowed();
       const cleanName = groupName.trim();
       if (!cleanName) {
         throw new Error('Group name is required.');
@@ -93,12 +80,11 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
       await addGroup({ group: cleanName, device_macs: cleanMacs });
       await refreshGroups(false);
     },
-    [ensureGroupActionsAllowed, refreshGroups]
+    [refreshGroups]
   );
 
   const handleAssignDeviceToGroup = useCallback(
     async (groupName: string, deviceMac: string) => {
-      ensureGroupActionsAllowed();
       const cleanName = groupName.trim();
       const cleanMac = deviceMac.trim();
       if (!cleanName || !cleanMac) {
@@ -108,12 +94,11 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
       await assignDeviceToGroup(cleanMac, cleanName);
       await refreshGroups(false);
     },
-    [ensureGroupActionsAllowed, refreshGroups]
+    [refreshGroups]
   );
 
   const handleRemoveDeviceFromGroup = useCallback(
     async (groupName: string, deviceMac: string) => {
-      ensureGroupActionsAllowed();
       const cleanName = groupName.trim();
       const cleanMac = deviceMac.trim();
       if (!cleanName || !cleanMac) {
@@ -123,12 +108,11 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
       await deleteDeviceFromGroup(cleanMac, cleanName);
       await refreshGroups(false);
     },
-    [ensureGroupActionsAllowed, refreshGroups]
+    [refreshGroups]
   );
 
   const handleDeleteGroup = useCallback(
     async (groupName: string) => {
-      ensureGroupActionsAllowed();
       const cleanName = groupName.trim();
       if (!cleanName) {
         throw new Error('Group name is required.');
@@ -137,7 +121,7 @@ export const useGroups = ({ useMockData, devices }: UseGroupsParams) => {
       await deleteGroup(cleanName);
       await refreshGroups(false);
     },
-    [ensureGroupActionsAllowed, refreshGroups]
+    [refreshGroups]
   );
 
   const deviceGroupsByMac = useMemo(() => {

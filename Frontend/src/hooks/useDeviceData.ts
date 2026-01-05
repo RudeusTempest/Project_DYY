@@ -6,51 +6,34 @@ import {
   type DeviceRecord,
   type ProtocolMethod,
 } from '../api/devices';
-import { mockDevices } from '../mockData';
 
-const MOCK_ERROR_MESSAGE =
-  'Showing mock data (backend calls disabled).';
 const API_ERROR_MESSAGE =
-  'Unable to load devices from the API. Start the backend or switch to mock data in Settings.';
+  'Unable to load devices from the API. Start the backend and try again.';
 
 export const useDeviceData = () => {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
-  const [useMockData, setUseMockData] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const applyMockData = useCallback(() => {
-    setDevices(mockDevices);
-  }, []);
-
   const reloadDevicesAndCredentials = useCallback(
-    async (forceMock = useMockData) => {
-      if (forceMock) {
-        applyMockData();
-        setError(MOCK_ERROR_MESSAGE);
-        return;
-      }
-
+    async () => {
       const deviceData = await fetchAllDevices().catch(() => null);
 
       const hasDevices = Array.isArray(deviceData) && deviceData.length > 0;
 
       if (hasDevices) {
         setDevices(deviceData);
-        setUseMockData(false);
         setError(null);
         return;
       }
 
-      // API call failed or returned no data: do not fall back to mock data
-      // automatically. Surface an error so the user can decide to switch to
-      // mock data from Settings.
-      setUseMockData(false);
+      // API call failed or returned no data: surface an error so the user can
+      // fix the backend instead of silently showing stale data.
       setDevices([]);
       setError(API_ERROR_MESSAGE);
     },
-    [applyMockData, useMockData]
+    []
   );
 
   const loadInitialData = useCallback(async () => {
@@ -88,10 +71,6 @@ export const useDeviceData = () => {
   const refreshDevice = useCallback(
     async (ip: string, method: ProtocolMethod) => {
       if (!ip) {
-        return;
-      }
-      if (useMockData) {
-        setError('Refresh is disabled while showing mock data.');
         return;
       }
       setError(null);
@@ -144,7 +123,7 @@ export const useDeviceData = () => {
         );
       }
     },
-    [useMockData]
+    []
   );
 
   const handleDeviceAdded = useCallback(async () => {
@@ -160,11 +139,9 @@ export const useDeviceData = () => {
 
   return {
     devices,
-    useMockData,
     isLoading,
     error,
     isRefreshing,
-    setUseMockData,
     setError,
     reloadDevicesAndCredentials,
     handleGlobalRefresh,
