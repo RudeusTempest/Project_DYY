@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/add_device")    
 async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, Any]:
     try:
-        device_added = CredentialsController.add_device_cred(cred)
+        device_added = await CredentialsController.add_device_cred(cred)
         refreshed = await DeviceController.refresh_by_ip(cred.ip, method)
         return {"device added": device_added, "refreshed": refreshed}
     except Exception as e:
@@ -21,7 +21,7 @@ async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, Any]:
 @router.get("/connection_details")
 async def get_all_cred() -> List[Dict[str, Any]]:
     try:
-        return CredentialsController.get_all_cred()
+        return await CredentialsController.get_all_cred()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve credentials: {str(e)}")
 
@@ -29,7 +29,7 @@ async def get_all_cred() -> List[Dict[str, Any]]:
 @router.get("/get_one_cred")
 async def get_one_cred(ip: str) -> Dict[str, Any]:
     try:
-        result = CredentialsController.get_one_cred(ip)
+        result = await CredentialsController.get_one_cred(ip)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Credentials not found for IP: {ip}")
         return result

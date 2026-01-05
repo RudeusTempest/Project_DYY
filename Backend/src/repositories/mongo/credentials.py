@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 class CredentialsRepo:  
 
     @staticmethod
-    def add_device_cred(cred: dict) -> Dict[str, Any]:
+    async def add_device_cred(cred: dict) -> Dict[str, Any]:
         try:
             cred_collection.insert_one(cred)
             return {"success": True}

@@ -6,11 +6,12 @@ postgres_url = settings.postgres_url
  
 engine = create_async_engine(
     postgres_url,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    echo=False,  # enable/disable SQL logging for debugging
 )
 
  
-AsyncSessionLocal = async_sessionmaker(
+AsyncSessionLocal = async_sessionmaker( 
     autocommit=False,
     autoflush=False,
     bind=engine,
