@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream:Backend/src/config/database.py
-import os
 from pymongo import MongoClient
-=======
->>>>>>> Stashed changes:Backend/src/config/mongo.py
 from pymongo.errors import ConnectionFailure
 from pymongo import MongoClient
 import os
