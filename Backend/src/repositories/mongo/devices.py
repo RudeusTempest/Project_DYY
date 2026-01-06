@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 class DevicesRepo:
 
     @staticmethod
-    def save_info(mac_address: str, hostname: str, interface_data: list, last_updated: str, raw_date: Any, device_type: str = "unknown", info_neighbors: Optional[list] = None) -> None:
+    async def save_info(mac_address: str, hostname: str, interface_data: list, last_updated: str, raw_date: Any, device_type: str = "unknown", info_neighbors: Optional[list] = None) -> None:
         try:
             # Build device data with device_type included
             if info_neighbors:
@@ -48,7 +48,7 @@ class DevicesRepo:
 
 
     @staticmethod
-    def get_all_records() -> List[Dict[str, Any]]:
+    async def get_all_records() -> List[Dict[str, Any]]:
         try:
             return list(info_collection.find({}, {"_id": 0}))
         except Exception as e:
@@ -57,7 +57,7 @@ class DevicesRepo:
     
 
     @staticmethod
-    def get_one_record(ip: str) -> List[Dict[str, Any]]:
+    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
         try:
             return list(info_collection.find({"interface.ip_address": ip}, {"_id": 0}))
         except Exception as e:
@@ -66,7 +66,7 @@ class DevicesRepo:
     
 
     @staticmethod
-    def get_interface_data() -> List[Dict[str, Any]]:
+    async def get_interface_data() -> List[Dict[str, Any]]:
         try:
             return list(info_collection.find({}, {"interface": 1, "_id": 0}))
         except Exception as e:
@@ -75,7 +75,7 @@ class DevicesRepo:
     
 
     @staticmethod
-    def update_mbps(ip: str, mbps_received: float, mbps_sent: float) -> None:
+    async def update_mbps(ip: str, mbps_received: float, mbps_sent: float) -> None:
         try:
             # Save this back to MongoDB:
             info_collection.update_one(
@@ -90,7 +90,7 @@ class DevicesRepo:
 
 
     @staticmethod
-    def flag_device_inactive(mac_address: str) -> None:
+    async def flag_device_inactive(mac_address: str) -> None:
         try:
             info_collection.update_one(
                 {"mac": mac_address},
@@ -103,7 +103,7 @@ class DevicesRepo:
 #""""""""""""""""""""""""""""""""""""""""""""""""""CLI METHODES""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     @staticmethod
-    def update_bandwidth_cli(device_ip: str, bandwidth_data: dict) -> Optional[Dict[str, Any]]:
+    async def update_bandwidth_cli(device_ip: str, bandwidth_data: dict) -> Optional[Dict[str, Any]]:
         """
         Update bandwidth information for all interfaces of a specific device.
         Only updates the bandwidth field, does not modify IP, hostname, MAC, etc.
