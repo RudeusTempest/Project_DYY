@@ -20,6 +20,7 @@ interface SettingsModalProps {
   onStartAutoUpdate: () => Promise<void> | void;
   autoUpdateMessage: string | null;
   isStartingAutoUpdate: boolean;
+  variant?: 'modal' | 'inline';
 }
 
 // Modal that groups together app-wide settings: theme toggle, preferred update
@@ -40,165 +41,191 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onStartAutoUpdate,
   autoUpdateMessage,
   isStartingAutoUpdate,
+  variant = 'modal',
 }) => {
   const { theme, toggleTheme } = useTheme();
 
-  if (!isOpen) {
+  const isInline = variant === 'inline';
+
+  if (!isInline && !isOpen) {
     return null;
   }
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
-    if (event.target === event.currentTarget) {
+    if (!isInline && event.target === event.currentTarget) {
       onClose();
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal">
+  const content = (
+    <div className={`modal ${isInline ? 'modal--inline' : ''}`}>
+      {!isInline && (
         <button className="modal-close" onClick={onClose}>
           ×
         </button>
-        <h2>Settings</h2>
-
-        <section className="modal-section">
-          <h3>Theme</h3>
-          <p>
-            Toggle between light and dark mode. The selected mode is saved in
-            your browser.
-          </p>
-          <label className="theme-toggle">
-            <input
-              type="checkbox"
-              checked={theme === 'dark'}
-              onChange={toggleTheme}
-            />
-            <span>{theme === 'dark' ? 'Dark mode' : 'Dark mode'}</span>
-          </label>
-        </section>
-
-        <section className="modal-section">
-          <h3>Single Device Update Protocol</h3>
-          <p>Choose which protocol the Update button should use.</p>
-          <label className="protocol-option">
-            <input
-              type="radio"
-              name="protocol"
-              value="snmp"
-              checked={protocol === 'snmp'}
-              onChange={() => onProtocolChange('snmp')}
-            />
-            SNMP
-          </label>
-          <label className="protocol-option">
-            <input
-              type="radio"
-              name="protocol"
-              value="cli"
-              checked={protocol === 'cli'}
-              onChange={() => onProtocolChange('cli')}
-            />
-            CLI
-          </label>
-        </section>
-        <section className="modal-section">
-          <h3>Automatic Updates</h3>
-          <p>Kick off the backend job that keeps devices refreshed on a schedule.</p>
-          <div
-            className="modal-choice-row"
-            role="group"
-            aria-label="Automatic update protocol"
+      )}
+      <div className="modal-inline-header">
+        <div>
+          <h2>Settings</h2>
+        </div>
+        {isInline && (
+          <button
+            type="button"
+            className="inline-close-button"
+            onClick={onClose}
           >
-            <span className="modal-choice-row__label">Protocol</span>
-            <div className="modal-choice-row__options">
-              <button
-                type="button"
-                className={`pill-toggle ${autoUpdateMethod === 'snmp' ? 'pill-toggle--active' : ''}`}
-                onClick={() => onAutoUpdateMethodChange('snmp')}
-              >
-                SNMP
-              </button>
-              <button
-                type="button"
-                className={`pill-toggle ${autoUpdateMethod === 'cli' ? 'pill-toggle--active' : ''}`}
-                onClick={() => onAutoUpdateMethodChange('cli')}
-              >
-                CLI
-              </button>
-            </div>
-          </div>
-          <div className="modal-form">
-            <label>
-              Device interval (seconds)
-              <input
-                type="number"
-                min="0"
-                value={autoUpdateDeviceInterval}
-                onChange={(event) =>
-                  onAutoUpdateDeviceIntervalChange(
-                    Math.max(
-                      0,
-                      Number.parseInt(event.target.value, 10) || 0
-                    )
-                  )
-                }
-              />
-            </label>
-            <label>
-              Mbps interval (seconds)
-              <input
-                type="number"
-                min="0"
-                value={autoUpdateMbpsInterval}
-                onChange={(event) =>
-                  onAutoUpdateMbpsIntervalChange(
-                    Math.max(
-                      0,
-                      Number.parseInt(event.target.value, 10) || 0
-                    )
-                  )
-                }
-              />
-            </label>
+            Back to devices
+          </button>
+        )}
+      </div>
+
+      <section className="modal-section">
+        <h3>Theme</h3>
+        <p>
+          Toggle between light and dark mode. The selected mode is saved in
+          your browser.
+        </p>
+        <label className="theme-toggle">
+          <input
+            type="checkbox"
+            checked={theme === 'dark'}
+            onChange={toggleTheme}
+          />
+          <span>{theme === 'dark' ? 'Dark mode' : 'Dark mode'}</span>
+        </label>
+      </section>
+
+      <section className="modal-section">
+        <h3>Single Device Update Protocol</h3>
+        <p>Choose which protocol the Update button should use.</p>
+        <label className="protocol-option">
+          <input
+            type="radio"
+            name="protocol"
+            value="snmp"
+            checked={protocol === 'snmp'}
+            onChange={() => onProtocolChange('snmp')}
+          />
+          SNMP
+        </label>
+        <label className="protocol-option">
+          <input
+            type="radio"
+            name="protocol"
+            value="cli"
+            checked={protocol === 'cli'}
+            onChange={() => onProtocolChange('cli')}
+          />
+          CLI
+        </label>
+      </section>
+      <section className="modal-section">
+        <h3>Automatic Updates</h3>
+        <p>Kick off the backend job that keeps devices refreshed on a schedule.</p>
+        <div
+          className="modal-choice-row"
+          role="group"
+          aria-label="Automatic update protocol"
+        >
+          <span className="modal-choice-row__label">Protocol</span>
+          <div className="modal-choice-row__options">
             <button
               type="button"
-              onClick={onStartAutoUpdate}
-              disabled={isStartingAutoUpdate}
+              className={`pill-toggle ${autoUpdateMethod === 'snmp' ? 'pill-toggle--active' : ''}`}
+              onClick={() => onAutoUpdateMethodChange('snmp')}
             >
-              {isStartingAutoUpdate ? 'Starting…' : 'Start automatic updates'}
+              SNMP
             </button>
-            {autoUpdateMessage && (
-              <p className="modal-message">{autoUpdateMessage}</p>
-            )}
+            <button
+              type="button"
+              className={`pill-toggle ${autoUpdateMethod === 'cli' ? 'pill-toggle--active' : ''}`}
+              onClick={() => onAutoUpdateMethodChange('cli')}
+            >
+              CLI
+            </button>
           </div>
-        </section>
-        <section className="modal-section">
-          <h3>Device List Layout</h3>
-          <p>Switch between gallery cards and a simple list.</p>
-          <label className="protocol-option">
+        </div>
+        <div className="modal-form">
+          <label>
+            Device interval (seconds)
             <input
-              type="radio"
-              name="viewMode"
-              value="gallery"
-              checked={viewMode === 'gallery'}
-              onChange={() => onViewModeChange('gallery')}
+              type="number"
+              min="0"
+              value={autoUpdateDeviceInterval}
+              onChange={(event) =>
+                onAutoUpdateDeviceIntervalChange(
+                  Math.max(
+                    0,
+                    Number.parseInt(event.target.value, 10) || 0
+                  )
+                )
+              }
             />
-            Gallery
           </label>
-          <label className="protocol-option">
+          <label>
+            Mbps interval (seconds)
             <input
-              type="radio"
-              name="viewMode"
-              value="list"
-              checked={viewMode === 'list'}
-              onChange={() => onViewModeChange('list')}
+              type="number"
+              min="0"
+              value={autoUpdateMbpsInterval}
+              onChange={(event) =>
+                onAutoUpdateMbpsIntervalChange(
+                  Math.max(
+                    0,
+                    Number.parseInt(event.target.value, 10) || 0
+                  )
+                )
+              }
             />
-            List
           </label>
-        </section>
-      </div>
+          <button
+            type="button"
+            onClick={onStartAutoUpdate}
+            disabled={isStartingAutoUpdate}
+          >
+            {isStartingAutoUpdate ? 'Starting…' : 'Start automatic updates'}
+          </button>
+          {autoUpdateMessage && (
+            <p className="modal-message">{autoUpdateMessage}</p>
+          )}
+        </div>
+      </section>
+      <section className="modal-section">
+        <h3>Device List Layout</h3>
+        <p>Switch between gallery cards and a simple list.</p>
+        <label className="protocol-option">
+          <input
+            type="radio"
+            name="viewMode"
+            value="gallery"
+            checked={viewMode === 'gallery'}
+            onChange={() => onViewModeChange('gallery')}
+          />
+          Gallery
+        </label>
+        <label className="protocol-option">
+          <input
+            type="radio"
+            name="viewMode"
+            value="list"
+            checked={viewMode === 'list'}
+            onChange={() => onViewModeChange('list')}
+          />
+          List
+        </label>
+      </section>
+    </div>
+  );
+
+  if (isInline) {
+    return content;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      {content}
     </div>
   );
 };

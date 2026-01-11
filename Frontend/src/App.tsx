@@ -3,7 +3,7 @@ import './App.css';
 import Header from './components/header/Header';
 import Sidebar from './components/sidebar/Sidebar';
 import DeviceList, { type DeviceViewMode } from './components/device-list/DeviceList';
-import DeviceDetailsModal from './components/device-list/DeviceDetailsModal';
+import DeviceDetailsModal, { type DeviceDetailsStepId } from './components/device-list/DeviceDetailsModal';
 import SettingsModal from './components/header/SettingsModal';
 import AddDeviceModal from './components/header/AddDeviceModal';
 import GroupSettingsModal from './components/sidebar/GroupSettingsModal';
@@ -15,13 +15,27 @@ import { useProtocols } from './hooks/useProtocols';
 import { useDeviceFilters } from './hooks/useDeviceFilters';
 import { getAvailableDeviceTypes } from './utils/deviceUtils';
 
+type MainView =
+  | { type: 'devices' }
+  | {
+      type: 'device';
+      device: DeviceRecord;
+      section: DeviceDetailsStepId;
+      sectionLabel?: string;
+    }
+  | { type: 'settings' }
+  | { type: 'addDevice' }
+  | { type: 'groups' };
+
+const deviceStepLabels: Record<DeviceDetailsStepId, string> = {
+  details: 'Details',
+  interfaces: 'Interfaces',
+  ports: 'Ports',
+  groups: 'Groups',
+};
+
 const AppContent: React.FC = () => {
-  const [selectedDevice, setSelectedDevice] = useState<DeviceRecord | null>(
-    null
-  );
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
-  const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
+  const [mainView, setMainView] = useState<MainView>({ type: 'devices' });
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   const { theme } = useTheme();
 
@@ -30,7 +44,6 @@ const AppContent: React.FC = () => {
     isLoading,
     error,
     isRefreshing,
-    reloadDevicesAndCredentials,
     handleGlobalRefresh: refreshAllDevices,
     refreshDevice,
     handleDeviceAdded,
@@ -90,11 +103,11 @@ const AppContent: React.FC = () => {
   });
 
   const selectedDeviceProtocol = useMemo(() => {
-    if (!selectedDevice) {
+    if (mainView.type !== 'device') {
       return protocol;
     }
-    return getProtocolForDevice(selectedDevice);
-  }, [getProtocolForDevice, protocol, selectedDevice]);
+    return getProtocolForDevice(mainView.device);
+  }, [getProtocolForDevice, mainView, protocol]);
 
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([refreshAllDevices(), refreshGroups()]);
@@ -108,6 +121,169 @@ const AppContent: React.FC = () => {
     [deviceProtocolOverrides, protocol, refreshDevice]
   );
 
+  const goToDevices = useCallback(() => {
+    setMainView({ type: 'devices' });
+  }, []);
+
+  const handleSelectDevice = useCallback((device: DeviceRecord) => {
+    setMainView({ type: 'device', device, section: 'details' });
+  }, []);
+
+  const handleDeviceStepChange = useCallback(
+    (stepId: DeviceDetailsStepId, label: string) => {
+      setMainView((current) =>
+        current.type === 'device'
+          ? { ...current, section: stepId, sectionLabel: label }
+          : current
+      );
+    },
+    []
+  );
+
+  const breadcrumbs = useMemo(() => {
+    const crumbs: { label: string; onClick?: () => void }[] = [
+      {
+        label: 'Devices',
+        onClick: mainView.type !== 'devices' ? goToDevices : undefined,
+      },
+    ];
+
+    switch (mainView.type) {
+      case 'device':
+        crumbs.push(
+          { label: mainView.device.hostname },
+          {
+            label:
+              mainView.sectionLabel ??
+              deviceStepLabels[mainView.section] ??
+              'Details',
+          }
+        );
+        break;
+      case 'settings':
+        crumbs.push({ label: 'Settings' });
+        break;
+      case 'addDevice':
+        crumbs.push({ label: 'Add Device' });
+        break;
+      case 'groups':
+        crumbs.push({ label: 'Manage Groups' });
+        break;
+      default:
+        break;
+    }
+
+    return crumbs;
+  }, [goToDevices, mainView]);
+
+  const renderBreadcrumbs = () => (
+    <div className="breadcrumbs">
+      {breadcrumbs.map((crumb, index) => (
+        <React.Fragment key={`${crumb.label}-${index}`}>
+          {index > 0 && <span className="breadcrumbs__separator">→</span>}
+          {crumb.onClick ? (
+            <button
+              type="button"
+              className="breadcrumbs__link"
+              onClick={crumb.onClick}
+            >
+              {crumb.label}
+            </button>
+          ) : (
+            <span className="breadcrumbs__label">{crumb.label}</span>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  const statusMessages = (
+    <>
+      {isLoading && <div className="loading-state">Loading devices…</div>}
+      {!isLoading && isRefreshing && (
+        <div className="loading-state">Refreshing devices…</div>
+      )}
+      {error && <div className="error-state">{error}</div>}
+    </>
+  );
+
+  const renderMainView = () => {
+    switch (mainView.type) {
+      case 'device':
+        return (
+          <DeviceDetailsModal
+            variant="inline"
+            device={mainView.device}
+            protocol={selectedDeviceProtocol}
+            initialStep={mainView.section}
+            onStepChange={handleDeviceStepChange}
+            onProtocolChange={(method) =>
+              handleDeviceProtocolChange(mainView.device, method)
+            }
+            onClose={goToDevices}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsModal
+            variant="inline"
+            isOpen
+            onClose={goToDevices}
+            protocol={protocol}
+            onProtocolChange={setProtocol}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            autoUpdateDeviceInterval={autoUpdateDeviceInterval}
+            onAutoUpdateDeviceIntervalChange={setAutoUpdateDeviceInterval}
+            autoUpdateMbpsInterval={autoUpdateMbpsInterval}
+            onAutoUpdateMbpsIntervalChange={setAutoUpdateMbpsInterval}
+            autoUpdateMethod={autoUpdateMethod}
+            onAutoUpdateMethodChange={setAutoUpdateMethod}
+            onStartAutoUpdate={handleStartAutoUpdate}
+            autoUpdateMessage={autoUpdateMessage}
+            isStartingAutoUpdate={isStartingAutoUpdate}
+          />
+        );
+      case 'addDevice':
+        return (
+          <AddDeviceModal
+            variant="inline"
+            isOpen
+            onClose={goToDevices}
+            onDeviceAdded={handleDeviceAdded}
+          />
+        );
+      case 'groups':
+        return (
+          <GroupSettingsModal
+            variant="inline"
+            isOpen
+            onClose={goToDevices}
+            groups={groups}
+            onReloadGroups={reloadGroupsOnly}
+            onAddGroup={handleAddGroup}
+            onAssignDeviceToGroup={handleAssignDeviceToGroup}
+            onRemoveDeviceFromGroup={handleRemoveDeviceFromGroup}
+            onDeleteGroup={handleDeleteGroup}
+          />
+        );
+      default:
+        if (isLoading) {
+          return null;
+        }
+
+        return (
+          <DeviceList
+            devices={filteredDevices}
+            getProtocolForDevice={getProtocolForDevice}
+            onSelectDevice={handleSelectDevice}
+            onRefreshDevice={handleDeviceRefresh}
+            viewMode={viewMode}
+          />
+        );
+    }
+  };
+
   return (
     <div className={`app app--${theme}`}>
       <Header
@@ -116,8 +292,8 @@ const AppContent: React.FC = () => {
         onRefreshAll={handleRefreshAll}
         isRefreshing={isRefreshing}
         isLoading={isLoading}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenAddDevice={() => setIsAddDeviceOpen(true)}
+        onOpenSettings={() => setMainView({ type: 'settings' })}
+        onOpenAddDevice={() => setMainView({ type: 'addDevice' })}
         groupOptions={availableGroupNames}
         selectedGroup={selectedGroup}
         onGroupChange={setSelectedGroup}
@@ -136,72 +312,16 @@ const AppContent: React.FC = () => {
             current === groupName ? 'all' : groupName
           )
         }
-        onOpenGroupSettings={() => setIsGroupSettingsOpen(true)}
+        onOpenGroupSettings={() => setMainView({ type: 'groups' })}
       />
 
       <main className="main-content">
-        {isLoading && <div className="loading-state">Loading devices…</div>}
-        {!isLoading && isRefreshing && (
-          <div className="loading-state">Refreshing devices…</div>
-        )}
-        {error && <div className="error-state">{error}</div>}
-        {!isLoading && (
-          <DeviceList
-            devices={filteredDevices}
-            getProtocolForDevice={getProtocolForDevice}
-            onSelectDevice={(device) => setSelectedDevice(device)}
-            onRefreshDevice={handleDeviceRefresh}
-            viewMode={viewMode}
-          />
-        )}
+        <div className="content-header">{renderBreadcrumbs()}</div>
+        <div className="content-body">
+          {statusMessages}
+          {renderMainView()}
+        </div>
       </main>
-
-      <DeviceDetailsModal
-        device={selectedDevice}
-        protocol={selectedDeviceProtocol}
-        onProtocolChange={(method) => {
-          if (selectedDevice) {
-            handleDeviceProtocolChange(
-              selectedDevice,
-              method
-            );
-          }
-        }}
-        onClose={() => setSelectedDevice(null)}
-      />
-
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        protocol={protocol}
-        onProtocolChange={setProtocol}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        autoUpdateDeviceInterval={autoUpdateDeviceInterval}
-        onAutoUpdateDeviceIntervalChange={setAutoUpdateDeviceInterval}
-        autoUpdateMbpsInterval={autoUpdateMbpsInterval}
-        onAutoUpdateMbpsIntervalChange={setAutoUpdateMbpsInterval}
-        autoUpdateMethod={autoUpdateMethod}
-        onAutoUpdateMethodChange={setAutoUpdateMethod}
-        onStartAutoUpdate={handleStartAutoUpdate}
-        autoUpdateMessage={autoUpdateMessage}
-        isStartingAutoUpdate={isStartingAutoUpdate}
-      />
-      <GroupSettingsModal
-        isOpen={isGroupSettingsOpen}
-        onClose={() => setIsGroupSettingsOpen(false)}
-        groups={groups}
-        onReloadGroups={reloadGroupsOnly}
-        onAddGroup={handleAddGroup}
-        onAssignDeviceToGroup={handleAssignDeviceToGroup}
-        onRemoveDeviceFromGroup={handleRemoveDeviceFromGroup}
-        onDeleteGroup={handleDeleteGroup}
-      />
-      <AddDeviceModal
-        isOpen={isAddDeviceOpen}
-        onClose={() => setIsAddDeviceOpen(false)}
-        onDeviceAdded={handleDeviceAdded}
-      />
     </div>
   );
 };

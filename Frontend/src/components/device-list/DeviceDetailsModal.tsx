@@ -14,13 +14,16 @@ const stepConfig = [
   { id: 'groups', label: 'Groups' },
 ] as const;
 
-type StepId = (typeof stepConfig)[number]['id'];
+export type DeviceDetailsStepId = (typeof stepConfig)[number]['id'];
 
 interface DeviceDetailsModalProps {
   device: DeviceRecord | null;
   protocol: ProtocolMethod;
   onProtocolChange: (method: ProtocolMethod) => void;
   onClose: () => void;
+  initialStep?: DeviceDetailsStepId;
+  onStepChange?: (step: DeviceDetailsStepId, label: string) => void;
+  variant?: 'modal' | 'inline';
 }
 
 // Detailed look at a single device with paginated sections to avoid long
@@ -30,15 +33,32 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
   protocol,
   onProtocolChange,
   onClose,
+  initialStep = 'details',
+  onStepChange,
+  variant = 'modal',
 }) => {
-  const [activeStep, setActiveStep] = useState<StepId>('details');
+  const [activeStep, setActiveStep] = useState<DeviceDetailsStepId>(
+    initialStep ?? 'details'
+  );
+  const isInline = variant === 'inline';
+
+  const getStepLabel = (step: DeviceDetailsStepId) =>
+    stepConfig.find((config) => config.id === step)?.label ?? step;
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !device) {
+    if (!device) {
       return;
     }
 
-    setActiveStep('details');
+    const nextStep = initialStep ?? 'details';
+    setActiveStep(nextStep);
+    onStepChange?.(nextStep, getStepLabel(nextStep));
+  }, [device, initialStep, onStepChange]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !device || isInline) {
+      return;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -48,14 +68,19 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [device, onClose]);
+  }, [device, isInline, onClose]);
 
   const handleOverlayClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
-    if (event.target === event.currentTarget) {
+    if (!isInline && event.target === event.currentTarget) {
       onClose();
     }
+  };
+
+  const setStep = (step: DeviceDetailsStepId) => {
+    setActiveStep(step);
+    onStepChange?.(step, getStepLabel(step));
   };
 
   const handleProtocolToggle = () => {
@@ -184,7 +209,9 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           ? Math.max(index - 1, 0)
           : Math.min(index + 1, stepConfig.length - 1);
 
-      return stepConfig[nextIndex].id;
+      const nextStep = stepConfig[nextIndex].id;
+      onStepChange?.(nextStep, getStepLabel(nextStep));
+      return nextStep;
     });
   };
 
@@ -360,73 +387,100 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal-content modal-content--paged">
+  const content = (
+    <div
+      className={`modal-content modal-content--paged ${
+        isInline ? 'modal-content--inline' : ''
+      }`}
+    >
+      {!isInline && (
         <button className="modal-close" onClick={onClose}>
           ×
         </button>
+      )}
 
-        <div className="modal-header">
+      <div className="modal-header">
+        <div className="modal-header__row">
           <div className="modal-header__title">
             <h2>{device.hostname}</h2>
             <span className={`status-chip status-chip--${status}`}>
               {status}
             </span>
           </div>
-          <p className="modal-subtitle">
-            IP {deviceIpLabel} · MAC {device.mac} · Updated {device.lastUpdatedAt}
-          </p>
-        </div>
-
-        <div className="modal-steps">
-          {stepConfig.map((step) => {
-            const isActive = step.id === activeStep;
-            return (
-              <button
-                key={step.id}
-                className={`modal-step ${isActive ? 'modal-step--active' : ''}`}
-                onClick={() => setActiveStep(step.id)}
-                type="button"
-              >
-                {step.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="modal-body">{renderStepContent()}</div>
-
-        <div className="modal-footer">
-          <span className="modal-footer__progress">
-            Step {currentStepIndex + 1} of {stepConfig.length}
-          </span>
-          <div className="modal-footer__actions">
+          {isInline && (
             <button
               className="nav-button nav-button--ghost"
               type="button"
               onClick={onClose}
             >
-              Close
+              Back to devices
             </button>
+          )}
+        </div>
+        <p className="modal-subtitle">
+          IP {deviceIpLabel} · MAC {device.mac} · Updated {device.lastUpdatedAt}
+        </p>
+      </div>
+
+      <div className="modal-steps">
+        {stepConfig.map((step) => {
+          const isActive = step.id === activeStep;
+          return (
             <button
-              className="nav-button"
+              key={step.id}
+              className={`modal-step ${isActive ? 'modal-step--active' : ''}`}
+              onClick={() => setStep(step.id)}
               type="button"
-              onClick={() => goToStep('prev')}
-              disabled={isFirstStep}
             >
-              Previous
+              {step.label}
             </button>
-            <button
-              className="nav-button nav-button--primary"
-              type="button"
-              onClick={() => (isLastStep ? onClose() : goToStep('next'))}
-            >
-              {isLastStep ? 'Done' : 'Next'}
-            </button>
-          </div>
+          );
+        })}
+      </div>
+
+      <div className={`modal-body ${isInline ? 'modal-body--inline' : ''}`}>
+        {renderStepContent()}
+      </div>
+
+      <div className="modal-footer">
+        <span className="modal-footer__progress">
+          Step {currentStepIndex + 1} of {stepConfig.length}
+        </span>
+        <div className="modal-footer__actions">
+          <button
+            className="nav-button nav-button--ghost"
+            type="button"
+            onClick={onClose}
+          >
+            {isInline ? 'Back to devices' : 'Close'}
+          </button>
+          <button
+            className="nav-button"
+            type="button"
+            onClick={() => goToStep('prev')}
+            disabled={isFirstStep}
+          >
+            Previous
+          </button>
+          <button
+            className="nav-button nav-button--primary"
+            type="button"
+            onClick={() => (isLastStep ? onClose() : goToStep('next'))}
+          >
+            {isLastStep ? 'Done' : 'Next'}
+          </button>
         </div>
       </div>
+    </div>
+  );
+
+  if (isInline) {
+    return content;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      {content}
     </div>
   );
 };
