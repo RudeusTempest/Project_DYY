@@ -1,6 +1,8 @@
-import os
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from pymongo import MongoClient
+import os
+
 
 # Read Mongo URL from env; default to localhost so devs running outside Docker don't need extra config
 mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
@@ -22,3 +24,4 @@ cred_collection = db["devices_cred"]
 info_collection = db["devices_info"]
 archive = db["archive"]
 groups_collection = db["groups"]
+ 
