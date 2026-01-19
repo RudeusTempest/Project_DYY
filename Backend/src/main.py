@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from src.middleware.cors import setup_cors
 from src.routes import devices, credentials, groups
-
 from src.config.postgres import engine
 from src.db.postgres.base import Base
+from src.models.postgres.config import Config, ConfigArchive
 from contextlib import asynccontextmanager
 
 

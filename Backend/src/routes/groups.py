@@ -53,7 +53,7 @@ async def delete_device_from_group(device_mac: str, group_name: str) -> Dict[str
         raise HTTPException(status_code=500, detail=f"Failed to delete device from group: {str(e)}")    
     
 
-@router.put("/delete_group")    
+@router.delete("/delete_group")    
 async def delete_group(group_name: str) -> Dict[str, Any]:
     try:
         return await GroupController.delete_group(group_name)
