@@ -1,4 +1,5 @@
 from src.repositories.postgres.devices import DevicesRepo
+from src.repositories.postgres.config import ConfigRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
@@ -12,13 +13,13 @@ class DeviceService:
     async def update_device_info_snmp(cred: dict) -> Dict[str, Any]:
         try:
             snmp_password = cred.pop("snmp_password", None)
-            mac_address_input = cred.pop("mac_address", None)
+            mac_address = cred.pop("mac_address", None)
             device_type = cred.get("device_type")  # Extract device type from credentials
             ip = cred.get("ip")
 
             if not snmp_password:
                 print(f"No SNMP password provided for device {ip}")
-                await DevicesRepo.flag_device_inactive(mac_address_input)
+                await DevicesRepo.flag_device_inactive(mac_address)
                 return {"success": False, "reason": f"No SNMP password provided for device {ip}"}
 
             print(f"Updating device via SNMP: {ip}")
@@ -33,15 +34,15 @@ class DeviceService:
             interface_indexes = await ConnectionService.get_interfaces_indexes(ip, snmp_password)
             if interface_indexes is None or len(interface_indexes) == 0:
                 print(f"Failed to get valid interface indexes for {ip}")
-                await DevicesRepo.flag_device_inactive(mac_address_input)
+                await DevicesRepo.flag_device_inactive(mac_address)
                 return {"success": False, "reason": f"Failed to get valid interface indexes for {ip}"}
 
             print(f"Found {len(interface_indexes)} valid interfaces")
 
             # Use MAC address from credentials (ensures consistency with CLI method)
             # This is the device's unique identifier in the database
-            mac_address = mac_address_input if mac_address_input else "Not found"
-            print(f"MAC Address: {mac_address} (from credentials)")
+            mac_addr = mac_address if mac_address else "Not found"
+            print(f"MAC Address: {mac_addr} (from credentials)")
 
             # Fetch interface index to IP mapping
             index_to_ip_mapping = await ConnectionService.get_interface_index_to_ip_mapping(ip, snmp_password)
@@ -92,14 +93,24 @@ class DeviceService:
             raw_date, last_updated = now_formatted()
 
             # Save to database with device_type
-            await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
+            await DevicesRepo.save_info(mac_addr, hostname, interface_data, last_updated, raw_date, device_type)
             print(f"Successfully updated device {ip} via SNMP and saved to DB")
+            
+            # Restore mac_address to cred for config capture
+            cred["mac_address"] = mac_addr
+            
+            # Fetch and save device configuration
+            try:
+                await DeviceService.capture_and_save_config(cred)
+            except Exception as e:
+                print(f"Warning: Failed to capture configuration for device {ip}: {e}")
+            
             return {"success": True}
 
         except Exception as e:
-            print(f"Error updating device {cred.get('ip', 'unknown')} via SNMP: {e}")
-            mac_address = cred.get('mac_address', 'unknown')
-            await DevicesRepo.flag_device_inactive(mac_address)
+            print(f"Error updating device {ip or 'unknown'} via SNMP: {e}")
+            if mac_address:
+                await DevicesRepo.flag_device_inactive(mac_address)
             return {"success": False, "reason": f"Error updating device via SNMP: {str(e)}"}
 
 
@@ -153,6 +164,51 @@ class DeviceService:
         except Exception as e:
             print(f"Error refreshing device {ip}: {e}")
             return {"success": False, "reason": f"Error refreshing device {ip}: {e}"}
+
+    @staticmethod
+    async def capture_and_save_config(cred: dict) -> None:
+        """
+        Helper method to capture device configuration via CLI and save it to the database.
+        Handles both SNMP and CLI polling scenarios.
+        """
+        try:
+            ip = cred.get("ip")
+            mac_address = cred.get("mac_address")
+            device_type = cred.get("device_type")
+            
+            # Try to connect via CLI to fetch configuration
+            connection = ConnectionService.connect(cred)
+            if not connection:
+                print(f"Could not establish CLI connection to fetch config for device {ip}")
+                return
+            
+            config_output = None
+            
+            try:
+                if "cisco" in device_type:
+                    config_output = ConnectionService.get_cisco_config(connection, device_type)
+                elif "juniper" in device_type:
+                    config_output = ConnectionService.get_juniper_config(connection, device_type)
+                else:
+                    print(f"Unsupported device type for config capture: {device_type}")
+            finally:
+                # Always close connection
+                try:
+                    connection.disconnect()
+                except Exception:
+                    pass
+            
+            if config_output:
+                from datetime import datetime
+                
+                # Save configuration to database (will automatically archive old config if exists)
+                await ConfigRepo.save_config(mac_address, config_output, datetime.now())
+                print(f"Successfully captured and saved configuration for device {mac_address} ({ip})")
+            else:
+                print(f"No configuration data retrieved for device {ip}")
+                
+        except Exception as e:
+            print(f"Error capturing configuration: {e}")
 
 
     @staticmethod
@@ -253,23 +309,28 @@ class DeviceService:
             cred.pop("snmp_password", None)
             mac_address = cred.pop("mac_address", None)
             device_type = cred.get("device_type")  # Extract device type from credentials
+            ip = cred.get("ip")
             
             connection = ConnectionService.connect(cred)
             
             if not connection:
                     await DevicesRepo.flag_device_inactive(mac_address)
-                    return {"success": False, "reason": f"Failed to connect to device {cred.get('mac_address', 'unknown')}"}
+                    return {"success": False, "reason": f"Failed to connect to device {ip}"}
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
                 
-                # Close the connection
-                connection.disconnect()
-                
                 if outputs is None:
-                    print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
-                    return {"success": False, "reason": f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}"}
+                    connection.disconnect()
+                    print(f"Failed to get CLI outputs from device {ip}")
+                    return {"success": False, "reason": f"Failed to get CLI outputs from device {ip}"}
                     
                 hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date = outputs
+                
+                # Capture configuration before disconnecting
+                config_output = ConnectionService.get_cisco_config(connection, cred["device_type"])
+                
+                # Close the connection
+                connection.disconnect()
                 
                 extraction_result = ExtractionService.extract_cisco_cli(
                     cred["device_type"], 
@@ -280,26 +341,39 @@ class DeviceService:
                     all_interfaces_output
                 )
                 if extraction_result is None:
-                    print(f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}")
-                    return {"success": False, "reason": f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}"}
+                    print(f"Failed to extract CLI data from device {ip}")
+                    return {"success": False, "reason": f"Failed to extract CLI data from device {ip}"}
                     
-                mac_address, hostname, interface_data, info_neighbors = extraction_result
+                extracted_mac, hostname, interface_data, info_neighbors = extraction_result
                 
                 # Save to database with device_type
-                await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
+                await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
+                
+                # Save configuration to database
+                if config_output:
+                    try:
+                        from datetime import datetime
+                        await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
+                        print(f"Successfully saved configuration for device {extracted_mac}")
+                    except Exception as e:
+                        print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
                 
 
             elif "juniper" in cred["device_type"]:
                 outputs = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
 
-                # Close the connection
-                connection.disconnect()
-
                 if outputs is None:
-                    print(f"Failed to get CLI outputs from device {cred.get('ip', 'unknown')}")
-                    return {"success": False, "reason": f"Failed to get outputs from device {cred['ip']}"}
+                    connection.disconnect()
+                    print(f"Failed to get CLI outputs from device {ip}")
+                    return {"success": False, "reason": f"Failed to get outputs from device {ip}"}
                     
                 hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date = outputs
+                
+                # Capture configuration before disconnecting
+                config_output = ConnectionService.get_juniper_config(connection, cred["device_type"])
+                
+                # Close the connection
+                connection.disconnect()
                 
                 extraction_result = ExtractionService.extract_juniper_cli(
                     cred["device_type"], 
@@ -309,22 +383,36 @@ class DeviceService:
                     all_interfaces_output
                 )
                 if extraction_result is None:
-                    print(f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}")
-                    return {"success": False, "reason": f"Failed to extract CLI data from device {cred.get('ip', 'unknown')}"}
+                    print(f"Failed to extract CLI data from device {ip}")
+                    return {"success": False, "reason": f"Failed to extract CLI data from device {ip}"}
                     
-                mac_address, hostname, interface_data = extraction_result
+                extracted_mac, hostname, interface_data = extraction_result
                 
                 # Save to database with device_type
-                await DevicesRepo.save_info(mac_address, hostname, interface_data, last_updated, raw_date, device_type)
+                await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type)
+                
+                # Save configuration to database
+                if config_output:
+                    try:
+                        from datetime import datetime
+                        await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
+                        print(f"Successfully saved configuration for device {extracted_mac}")
+                    except Exception as e:
+                        print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
 
             if connection:
-                connection.disconnect()
+                try:
+                    connection.disconnect()
+                except Exception:
+                    pass
             
             return {"success": True}
             
         except Exception as e:
-            print(f"Error updating device CLI {cred.get('ip', 'unknown')}: {e}")
-            return {"success": False, "reason": f"Error updating device CLI {cred.get('ip', 'unknown')}: {e}"}
+            print(f"Error updating device CLI {ip or 'unknown'}: {e}")
+            if mac_address:
+                await DevicesRepo.flag_device_inactive(mac_address)
+            return {"success": False, "reason": f"Error updating device CLI {ip or 'unknown'}: {e}"}
 
 
     @staticmethod

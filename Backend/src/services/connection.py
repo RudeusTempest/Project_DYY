@@ -554,3 +554,33 @@ class ConnectionService:
         except Exception as e:
             print(f"Error getting Juniper CLI outputs for {device_type}: {e}")
             return None
+
+
+    @staticmethod
+    def get_cisco_config(net_connect: Any, device_type: str) -> Optional[str]:
+        """
+        Fetch the full running configuration from a Cisco device.
+        """
+        try:
+            if device_type in ["cisco_ios", "cisco_xr"]:
+                config_output = net_connect.send_command("show running-config")
+                return config_output
+            return None
+        except Exception as e:
+            print(f"Error getting Cisco configuration for {device_type}: {e}")
+            return None
+
+
+    @staticmethod
+    def get_juniper_config(net_connect: Any, device_type: str) -> Optional[str]:
+        """
+        Fetch the full configuration from a Juniper device.
+        """
+        try:
+            if device_type == "juniper_junos":
+                config_output = net_connect.send_command("show configuration")
+                return config_output
+            return None
+        except Exception as e:
+            print(f"Error getting Juniper configuration for {device_type}: {e}")
+            return None
