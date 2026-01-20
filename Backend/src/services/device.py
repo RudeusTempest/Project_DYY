@@ -148,6 +148,42 @@ class DeviceService:
 
 
     @staticmethod
+    async def get_current_config(ip: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the latest configuration for a device by IP address.
+        Converts IP to MAC address and retrieves config from repository.
+        """
+        try:
+            mac_address = await DevicesRepo.get_mac_from_ip(ip)
+            if not mac_address:
+                return None
+            
+            config = await ConfigRepo.get_latest_config(mac_address)
+            return config
+        except Exception as e:
+            print(f"Error getting current config for IP {ip}: {e}")
+            return None
+
+
+    @staticmethod
+    async def get_config_history(ip: str) -> List[Dict[str, Any]]:
+        """
+        Get the configuration history for a device by IP address.
+        Converts IP to MAC address and retrieves history from repository.
+        """
+        try:
+            mac_address = await DevicesRepo.get_mac_from_ip(ip)
+            if not mac_address:
+                return []
+            
+            history = await ConfigRepo.get_config_history(mac_address)
+            return history
+        except Exception as e:
+            print(f"Error getting config history for IP {ip}: {e}")
+            return []
+
+
+    @staticmethod
     async def refresh_by_ip(ip: str, method: str) -> Optional[bool]:
         try:
             cred = await CredentialsService.get_one_cred(ip)
@@ -164,6 +200,7 @@ class DeviceService:
         except Exception as e:
             print(f"Error refreshing device {ip}: {e}")
             return {"success": False, "reason": f"Error refreshing device {ip}: {e}"}
+
 
     @staticmethod
     async def capture_and_save_config(cred: dict) -> None:

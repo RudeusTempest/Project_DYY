@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from src.controllers.devices import DeviceController
-from src.repositories.postgres.config import ConfigRepo
 from typing import List, Dict, Any
 import asyncio
 
@@ -52,14 +51,14 @@ async def start_program(device_interval: int, mbps_interval: int, method: str = 
 
 
 @router.get("/config/current")
-async def get_current_config(mac_address: str) -> Dict[str, Any]:
+async def get_current_config(ip: str) -> Dict[str, Any]:
     """
-    Retrieve the latest configuration for a device by MAC address.
+    Retrieve the latest configuration for a device by IP address.
     """
     try:
-        config = await ConfigRepo.get_latest_config(mac_address)
+        config = await DeviceController.get_current_config(ip)
         if not config:
-            raise HTTPException(status_code=404, detail=f"No configuration found for device MAC: {mac_address}")
+            raise HTTPException(status_code=404, detail=f"No configuration found for device at IP: {ip}")
         return config
     except HTTPException:
         raise
@@ -68,12 +67,12 @@ async def get_current_config(mac_address: str) -> Dict[str, Any]:
 
 
 @router.get("/config/history")
-async def get_config_history(mac_address: str) -> List[Dict[str, Any]]:
+async def get_config_history(ip: str) -> List[Dict[str, Any]]:
     """
-    Retrieve the configuration history (archived configurations) for a device by MAC address.
+    Retrieve the configuration history (archived configurations) for a device by IP address.
     """
     try:
-        history = await ConfigRepo.get_config_history(mac_address)
+        history = await DeviceController.get_config_history(ip)
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve configuration history: {str(e)}")

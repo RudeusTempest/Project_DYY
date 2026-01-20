@@ -17,6 +17,16 @@ class DeviceController:
 
 
     @staticmethod
+    async def get_current_config(ip: str) -> Optional[Dict[str, Any]]:
+        return await DeviceService.get_current_config(ip)
+
+
+    @staticmethod
+    async def get_config_history(ip: str) -> List[Dict[str, Any]]:
+        return await DeviceService.get_config_history(ip)
+
+
+    @staticmethod
     async def refresh_by_ip(ip: str, method: str) -> Optional[bool]:
         return await DeviceService.refresh_by_ip(ip, method)
     

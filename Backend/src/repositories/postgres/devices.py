@@ -4,6 +4,8 @@ from sqlalchemy.future import select
 from typing import Any, Dict, List, Optional
 # Import the Mongo devices repo to store interface-level details
 from src.repositories.mongo.devices import DevicesRepo as MongoDevicesRepo
+# Import credentials repo to get MAC from IP
+from src.repositories.postgres.credentials import CredentialsRepo
 
 
 class DevicesRepo:
@@ -158,6 +160,22 @@ class DevicesRepo:
                     await session.commit()
         except Exception:
             return
+
+
+    @staticmethod
+    async def get_mac_from_ip(ip: str) -> Optional[str]:
+        """
+        Get MAC address for a device by its IP address.
+        Queries the credentials table which has the direct IP-MAC mapping.
+        """
+        try:
+            cred = await CredentialsRepo.get_one_cred(ip)
+            if cred:
+                return cred.get("mac_address")
+            return None
+        except Exception as e:
+            print(f"Error in get_mac_from_ip for IP {ip}: {e}")
+            return None
 
 
     @staticmethod
