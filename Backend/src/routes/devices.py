@@ -76,3 +76,20 @@ async def get_config_history(ip: str) -> List[Dict[str, Any]]:
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve configuration history: {str(e)}")
+
+
+@router.get("/config/differences")
+async def get_config_differences(ip: str) -> Dict[str, Any]:
+    """
+    Retrieve the differences between the current and most recent archived configuration for a device by IP address.
+    Returns a dictionary with added_lines and deleted_lines.
+    """
+    try:
+        differences = await DeviceController.get_config_differences(ip)
+        if not differences:
+            raise HTTPException(status_code=404, detail=f"No configuration differences found for device at IP: {ip}")
+        return differences
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve configuration differences: {str(e)}")

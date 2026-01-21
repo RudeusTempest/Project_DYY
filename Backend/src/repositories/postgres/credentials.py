@@ -56,3 +56,19 @@ class CredentialsRepo:
                 return [{"ip": r[0], "snmp_password": r[1]} for r in rows]
         except Exception as e:
             return []
+
+
+    @staticmethod
+    async def get_mac_from_ip(ip: str) -> Optional[str]:
+        """
+        Get MAC address for a device by its IP address.
+        Queries the credentials table which has the direct IP-MAC mapping.
+        """
+        try:
+            cred = await CredentialsRepo.get_one_cred(ip)
+            if cred:
+                return cred.get("mac_address")
+            return None
+        except Exception as e:
+            print(f"Error in get_mac_from_ip for IP {ip}: {e}")
+            return None

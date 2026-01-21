@@ -163,22 +163,6 @@ class DevicesRepo:
 
 
     @staticmethod
-    async def get_mac_from_ip(ip: str) -> Optional[str]:
-        """
-        Get MAC address for a device by its IP address.
-        Queries the credentials table which has the direct IP-MAC mapping.
-        """
-        try:
-            cred = await CredentialsRepo.get_one_cred(ip)
-            if cred:
-                return cred.get("mac_address")
-            return None
-        except Exception as e:
-            print(f"Error in get_mac_from_ip for IP {ip}: {e}")
-            return None
-
-
-    @staticmethod
     async def update_bandwidth_cli(device_ip: str, bandwidth_data: dict) -> Optional[Dict[str, Any]]:
         """Delegate bandwidth updates to Mongo and return a combined object with Postgres fields."""
         try:

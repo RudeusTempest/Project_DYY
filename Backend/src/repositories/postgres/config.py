@@ -1,8 +1,9 @@
 from src.config.postgres import AsyncSessionLocal
 from src.models.postgres.config import Config, ConfigArchive
 from sqlalchemy.future import select
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
+from src.repositories.postgres.credentials import CredentialsRepo
 
 
 class ConfigRepo:
@@ -128,3 +129,78 @@ class ConfigRepo:
                 await session.rollback()
             except Exception:
                 pass
+
+
+    @staticmethod
+    async def get_config_differences(ip: str) -> Optional[List[List[str]]]:
+        """
+        Compares the latest configuration with the most recent archived configuration.
+        
+        Args:
+            ip: The IP address of the device
+            
+        Returns:
+            A list containing two lists: [added_lines, deleted_lines]
+            - added_lines: Lines that exist in the current config but not in the archived config
+            - deleted_lines: Lines that exist in the archived config but not in the current config
+            Returns None if either config cannot be retrieved or if there's an error.
+        """
+        try:
+            # Convert IP to MAC address
+            mac_address = await CredentialsRepo.get_mac_from_ip(ip)
+            if not mac_address:
+                print(f"Could not find MAC address for IP: {ip}")
+                return None
+            
+            # Get the latest current configuration
+            async with AsyncSessionLocal() as session:
+                q = select(Config).where(Config.mac_address == mac_address)
+                res = await session.execute(q)
+                current_config = res.scalar_one_or_none()
+                
+                if not current_config:
+                    print(f"No current configuration found for MAC: {mac_address}")
+                    return None
+                
+                current_config_text = current_config.configuration
+            
+            # Get the latest archived configuration
+            async with AsyncSessionLocal() as session:
+                q = select(ConfigArchive).where(ConfigArchive.mac_address == mac_address).order_by(ConfigArchive.queried_at.desc())
+                res = await session.execute(q)
+                latest_archive = res.scalars().first()
+                
+                if not latest_archive:
+                    print(f"No archived configuration found for MAC: {mac_address}")
+                    return None
+                
+                archived_config_text = latest_archive.configuration
+            
+            # Split configurations into lists of lines
+            current_lines = current_config_text.split('\n') if current_config_text else []
+            archived_lines = archived_config_text.split('\n') if archived_config_text else []
+            
+            # Strip whitespace from each line for comparison
+            current_lines = [line.strip() for line in current_lines if line.strip()]
+            archived_lines = [line.strip() for line in archived_lines if line.strip()]
+            
+            # Create mutable copies for comparison
+            current_lines_copy = current_lines.copy()
+            archived_lines_copy = archived_lines.copy()
+            
+            # Compare and remove matching lines
+            for line in current_lines:
+                if line in archived_lines_copy:
+                    current_lines_copy.remove(line)
+                    archived_lines_copy.remove(line)
+            
+            # current_lines_copy now contains added lines (in current but not in archive)
+            # archived_lines_copy now contains deleted lines (in archive but not in current)
+            added_lines = current_lines_copy
+            deleted_lines = archived_lines_copy
+
+            return [added_lines, deleted_lines]
+            
+        except Exception as e:
+            print(f"Error comparing configurations for IP {ip}: {e}")
+            return None

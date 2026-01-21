@@ -1,4 +1,5 @@
 from src.repositories.postgres.devices import DevicesRepo
+from src.repositories.postgres.credentials import CredentialsRepo
 from src.repositories.postgres.config import ConfigRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
@@ -154,7 +155,7 @@ class DeviceService:
         Converts IP to MAC address and retrieves config from repository.
         """
         try:
-            mac_address = await DevicesRepo.get_mac_from_ip(ip)
+            mac_address = await CredentialsRepo.get_mac_from_ip(ip)
             if not mac_address:
                 return None
             
@@ -172,7 +173,7 @@ class DeviceService:
         Converts IP to MAC address and retrieves history from repository.
         """
         try:
-            mac_address = await DevicesRepo.get_mac_from_ip(ip)
+            mac_address = await CredentialsRepo.get_mac_from_ip(ip)
             if not mac_address:
                 return []
             
@@ -181,6 +182,26 @@ class DeviceService:
         except Exception as e:
             print(f"Error getting config history for IP {ip}: {e}")
             return []
+
+
+    @staticmethod
+    async def get_config_differences(ip: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the differences between the current and archived configuration for a device by IP address.
+        Returns a dictionary with added and deleted lines.
+        """
+        try:
+            differences = await ConfigRepo.get_config_differences(ip)
+            if differences:
+                return {
+                    "ip": ip,
+                    "added_lines": differences[0],
+                    "deleted_lines": differences[1]
+                }
+            return None
+        except Exception as e:
+            print(f"Error getting config differences for IP {ip}: {e}")
+            return None
 
 
     @staticmethod
