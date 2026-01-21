@@ -198,8 +198,15 @@ class ConfigRepo:
             # archived_lines_copy now contains deleted lines (in archive but not in current)
             added_lines = current_lines_copy
             deleted_lines = archived_lines_copy
+            
+            # Find the indexes of added lines in the original current_lines variable
+            added_lines_indexes = []
+            for added_line in added_lines:
+                if added_line in current_lines:
+                    index = current_lines.index(added_line)
+                    added_lines_indexes.append(index)
 
-            return [added_lines, deleted_lines]
+            return [added_lines, deleted_lines, current_lines, added_lines_indexes]
             
         except Exception as e:
             print(f"Error comparing configurations for IP {ip}: {e}")

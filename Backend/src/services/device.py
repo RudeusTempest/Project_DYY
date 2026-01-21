@@ -188,7 +188,7 @@ class DeviceService:
     async def get_config_differences(ip: str) -> Optional[Dict[str, Any]]:
         """
         Get the differences between the current and archived configuration for a device by IP address.
-        Returns a dictionary with added and deleted lines.
+        Returns a dictionary with added and deleted lines, and the indexes of added lines.
         """
         try:
             differences = await ConfigRepo.get_config_differences(ip)
@@ -196,7 +196,9 @@ class DeviceService:
                 return {
                     "ip": ip,
                     "added_lines": differences[0],
-                    "deleted_lines": differences[1]
+                    "deleted_lines": differences[1],
+                    "full_config_lines": differences[2],
+                    "added_lines_indexes": differences[3]
                 }
             return None
         except Exception as e:
