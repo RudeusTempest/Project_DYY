@@ -50,8 +50,9 @@ class DeviceController:
     async def main_snmp(device_interval, mbps_interval) -> None:
         try:
             await asyncio.gather(
-                DeviceController.periodic_refresh_snmp(device_interval), 
-                DeviceController.update_mbps_loop_snmp(mbps_interval)
+                DeviceService.periodic_refresh_snmp(device_interval), 
+                DeviceService.update_mbps_loop_snmp(mbps_interval),
+                DeviceService.poll_config_loop()
             )
         except Exception as e:
             print(f"Error in main_snmp: {e}")

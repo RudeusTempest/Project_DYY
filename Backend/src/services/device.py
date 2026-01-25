@@ -4,6 +4,7 @@ from src.repositories.postgres.config import ConfigRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
+from src.config.settings import settings
 from typing import Optional, Dict, List, Any
 import asyncio
 
@@ -272,6 +273,19 @@ class DeviceService:
 
 
     @staticmethod
+    async def poll_config_loop(cred):
+        while True:
+            try:
+                creds = await CredentialsService.get_all_cred()
+                for cred in creds:
+                    await DeviceService.capture_and_save_config(cred)
+                    await asyncio.sleep(settings.conf_interval)
+
+            except Exception as e:        
+                print(f"error in poll_config_loop: {e}")
+
+
+    @staticmethod
     async def periodic_refresh_snmp(device_interval: float) -> None:
         """
         Periodically refresh all devices via SNMP at the specified interval.
@@ -289,8 +303,7 @@ class DeviceService:
                             continue
                 await asyncio.sleep(device_interval)
             except Exception as e:
-                print(f"Error in periodic refresh SNMP: {e}")
-                await asyncio.sleep(device_interval)
+                print(f"cred Error in periodic refresh SNMP: {e}")
 
 
     @staticmethod
