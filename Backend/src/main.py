@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from src.middleware.cors import setup_cors
-from src.routes import devices, credentials, groups
+from src.routes import devices, credentials, groups, white_list
 from src.config.postgres import engine
 from src.db.postgres.base import Base
 from src.models.postgres.config import Config, ConfigArchive
+from src.models.postgres.white_list import WhiteList
 from contextlib import asynccontextmanager
 
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     app.include_router(devices.router, prefix="/devices", tags=["devices"])
     app.include_router(credentials.router, prefix="/credentials", tags=["credentials"])
     app.include_router(groups.router, prefix="/groups", tags=["groups"])
+    app.include_router(white_list.router, prefix="/white_list", tags=["white_list"])
     return app
 
 app = create_app()

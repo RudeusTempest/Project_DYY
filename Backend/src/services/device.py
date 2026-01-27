@@ -279,7 +279,8 @@ class DeviceService:
                 creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     await DeviceService.capture_and_save_config(cred)
-                    await asyncio.sleep(settings.conf_interval)
+                    
+                await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        
                 print(f"error in poll_config_loop: {e}")
