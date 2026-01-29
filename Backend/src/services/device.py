@@ -4,6 +4,7 @@ from src.repositories.postgres.config import ConfigRepo
 from src.services.connection import ConnectionService
 from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
+from src.services.white_list import WhiteListService
 from src.config.settings import settings
 from typing import Optional, Dict, List, Any
 import asyncio
@@ -279,7 +280,11 @@ class DeviceService:
                 creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     await DeviceService.capture_and_save_config(cred)
-                    
+                    current_config = await DeviceService.get_current_config(cred.get("ip"))
+                    differences = await DeviceService.get_config_differences(cred.get("ip"))
+                    white_list = await WhiteListService.get_white_list() 
+
+                        
                 await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        
