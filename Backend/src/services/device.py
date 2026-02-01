@@ -283,8 +283,10 @@ class DeviceService:
                     current_config = await DeviceService.get_current_config(cred.get("ip"))
                     differences = await DeviceService.get_config_differences(cred.get("ip"))
                     white_list = await WhiteListService.get_white_list() 
-
-                        
+                    for dict in white_list:
+                        if dict["words"] in differences["added_lines"] or dict["words"] in differences["deleted_lines"]:
+                            print("---------------------Alert frontend---------------------")
+                            print("---------------------Alert frontend---------------------")
                 await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        
