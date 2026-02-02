@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import '../Modal.css';
+import '../ViewPanel.css';
 import { addCredential, AddCredentialPayload } from '../../api/credentials';
-import { ProtocolMethod } from '../../api/devices';
+import { type ProtocolMethod } from '../../api/devices';
 
-interface AddDeviceModalProps {
-  isOpen: boolean;
+interface AddDeviceViewProps {
   onClose: () => void;
   onDeviceAdded: () => Promise<void> | void;
-  variant?: 'modal' | 'inline';
 }
 
 type CredentialFormState = {
@@ -30,22 +28,14 @@ const initialFormState: CredentialFormState = {
   snmp_password: '',
 };
 
-const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
-  isOpen,
+const AddDeviceView: React.FC<AddDeviceViewProps> = ({
   onClose,
   onDeviceAdded,
-  variant = 'modal',
 }) => {
   const [formState, setFormState] = useState<CredentialFormState>(initialFormState);
   const [method, setMethod] = useState<ProtocolMethod>('snmp');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
-  const isInline = variant === 'inline';
-
-  if (!isInline && !isOpen) {
-    return null;
-  }
 
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -94,39 +84,24 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
     }
   };
 
-  const handleOverlayClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    if (!isInline && event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  const content = (
-    <div className={`modal ${isInline ? 'modal--inline' : ''}`}>
-      {!isInline && (
-        <button className="modal-close" onClick={onClose}>
-          ×
-        </button>
-      )}
-      <div className="modal-inline-header">
+  return (
+    <section className="view-panel">
+      <div className="view-panel__header">
         <div>
           <h2>Add Device</h2>
           <p>Fill the credentials below and submit to call /credentials/add_device.</p>
         </div>
-        {isInline && (
-          <button
-            type="button"
-            className="inline-close-button"
-            onClick={onClose}
-          >
-            Back to devices
-          </button>
-        )}
+        <button
+          type="button"
+          className="view-panel__back-button"
+          onClick={onClose}
+        >
+          Back to devices
+        </button>
       </div>
-      <div className="modal-choice-row" role="group" aria-label="Discovery method">
-        <span className="modal-choice-row__label">Method</span>
-        <div className="modal-choice-row__options">
+      <div className="view-panel__choice-row" role="group" aria-label="Discovery method">
+        <span className="view-panel__choice-label">Method</span>
+        <div className="view-panel__choice-options">
           <button
             type="button"
             className={`pill-toggle ${method === 'snmp' ? 'pill-toggle--active' : ''}`}
@@ -143,7 +118,7 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
           </button>
         </div>
       </div>
-      <form className="modal-form" onSubmit={handleSubmit}>
+      <form className="view-panel__form" onSubmit={handleSubmit}>
         <label>
           Device Type
           <input
@@ -210,20 +185,10 @@ const AddDeviceModal: React.FC<AddDeviceModalProps> = ({
         <button type="submit" disabled={isSaving}>
           {isSaving ? 'Saving…' : 'Add Device'}
         </button>
-        {message && <p className="modal-message">{message}</p>}
+        {message && <p className="view-panel__message">{message}</p>}
       </form>
-    </div>
-  );
-
-  if (isInline) {
-    return content;
-  }
-
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      {content}
-    </div>
+    </section>
   );
 };
 
-export default AddDeviceModal;
+export default AddDeviceView;

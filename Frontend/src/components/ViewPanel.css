@@ -1,45 +1,14 @@
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1500;
-}
-
-.modal {
-  width: min(600px, 90vw);
-  max-height: 90vh;
-  overflow-y: auto;
+.view-panel {
+  width: 100%;
   background-color: var(--surface-color);
   border-radius: 12px;
   padding: 1.5rem;
   position: relative;
   color: var(--text-color);
-}
-
-.modal--inline {
-  width: 100%;
-  max-width: 1100px;
-  max-height: none;
-  margin: 0 auto;
   border: 1px solid var(--border-color);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
 }
 
-.modal-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  border: none;
-  background: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--text-color);
-}
-
-.modal-inline-header {
+.view-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -48,7 +17,7 @@
   margin-bottom: 0.75rem;
 }
 
-.inline-close-button {
+.view-panel__back-button {
   border: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-color);
@@ -58,17 +27,17 @@
   cursor: pointer;
 }
 
-.inline-close-button:hover {
+.view-panel__back-button:hover {
   background-color: var(--input-bg);
 }
 
-.modal-section {
+.view-panel__section {
   margin-top: 1.25rem;
   border-top: 1px solid var(--border-color);
   padding-top: 1rem;
 }
 
-.modal-section h3 {
+.view-panel__section h3 {
   margin-bottom: 0.35rem;
 }
 
@@ -87,13 +56,13 @@
   cursor: pointer;
 }
 
-.modal-form {
+.view-panel__form {
   display: grid;
   gap: 0.8rem;
   margin-top: 0.5rem;
 }
 
-.modal-choice-row {
+.view-panel__choice-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -101,12 +70,12 @@
   margin-top: 0.75rem;
 }
 
-.modal-choice-row__label {
+.view-panel__choice-label {
   font-weight: 700;
   color: var(--text-color);
 }
 
-.modal-choice-row__options {
+.view-panel__choice-options {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -129,14 +98,14 @@
   color: #fff;
 }
 
-.modal-form label {
+.view-panel__form label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   font-weight: 600;
 }
 
-.modal-form input {
+.view-panel__form input {
   padding: 0.45rem 0.6rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -144,7 +113,7 @@
   color: var(--text-color);
 }
 
-.modal-form button {
+.view-panel__form button {
   padding: 0.55rem 0.9rem;
   border-radius: 6px;
   border: none;
@@ -154,12 +123,12 @@
   cursor: pointer;
 }
 
-.modal-message {
+.view-panel__message {
   margin: 0;
   color: var(--muted-text);
 }
 
-.modal-ghost-button {
+.view-panel__ghost-button {
   padding: 0.35rem 0.65rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -168,7 +137,7 @@
   cursor: pointer;
 }
 
-.modal-muted {
+.view-panel__muted {
   color: var(--muted-text);
   margin: 0.1rem 0 0.25rem 0;
 }

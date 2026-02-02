@@ -1,11 +1,10 @@
 import React from 'react';
-import '../Modal.css';
-import { ProtocolMethod } from '../../api/devices';
+import '../ViewPanel.css';
+import { type ProtocolMethod } from '../../api/devices';
 import { useTheme } from '../../theme/ThemeContext';
 import type { DeviceViewMode } from '../device-list/DeviceList';
 
-interface SettingsModalProps {
-  isOpen: boolean;
+interface SettingsViewProps {
   onClose: () => void;
   protocol: ProtocolMethod;
   onProtocolChange: (method: ProtocolMethod) => void;
@@ -20,13 +19,11 @@ interface SettingsModalProps {
   onStartAutoUpdate: () => Promise<void> | void;
   autoUpdateMessage: string | null;
   isStartingAutoUpdate: boolean;
-  variant?: 'modal' | 'inline';
 }
 
-// Modal that groups together app-wide settings: theme toggle, preferred update
+// View that groups together app-wide settings: theme toggle, preferred update
 // protocol.
-const SettingsModal: React.FC<SettingsModalProps> = ({
-  isOpen,
+const SettingsView: React.FC<SettingsViewProps> = ({
   onClose,
   protocol,
   onProtocolChange,
@@ -41,47 +38,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onStartAutoUpdate,
   autoUpdateMessage,
   isStartingAutoUpdate,
-  variant = 'modal',
 }) => {
   const { theme, toggleTheme } = useTheme();
 
-  const isInline = variant === 'inline';
-
-  if (!isInline && !isOpen) {
-    return null;
-  }
-
-  const handleOverlayClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    if (!isInline && event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  const content = (
-    <div className={`modal ${isInline ? 'modal--inline' : ''}`}>
-      {!isInline && (
-        <button className="modal-close" onClick={onClose}>
-          ×
-        </button>
-      )}
-      <div className="modal-inline-header">
+  return (
+    <section className="view-panel">
+      <div className="view-panel__header">
         <div>
           <h2>Settings</h2>
         </div>
-        {isInline && (
-          <button
-            type="button"
-            className="inline-close-button"
-            onClick={onClose}
-          >
-            Back to devices
-          </button>
-        )}
+        <button
+          type="button"
+          className="view-panel__back-button"
+          onClick={onClose}
+        >
+          Back to devices
+        </button>
       </div>
 
-      <section className="modal-section">
+      <section className="view-panel__section">
         <h3>Theme</h3>
         <p>
           Toggle between light and dark mode. The selected mode is saved in
@@ -97,7 +72,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         </label>
       </section>
 
-      <section className="modal-section">
+      <section className="view-panel__section">
         <h3>Single Device Update Protocol</h3>
         <p>Choose which protocol the Update button should use.</p>
         <label className="protocol-option">
@@ -121,16 +96,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           CLI
         </label>
       </section>
-      <section className="modal-section">
+      <section className="view-panel__section">
         <h3>Automatic Updates</h3>
         <p>Kick off the backend job that keeps devices refreshed on a schedule.</p>
         <div
-          className="modal-choice-row"
+          className="view-panel__choice-row"
           role="group"
           aria-label="Automatic update protocol"
         >
-          <span className="modal-choice-row__label">Protocol</span>
-          <div className="modal-choice-row__options">
+          <span className="view-panel__choice-label">Protocol</span>
+          <div className="view-panel__choice-options">
             <button
               type="button"
               className={`pill-toggle ${autoUpdateMethod === 'snmp' ? 'pill-toggle--active' : ''}`}
@@ -147,7 +122,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
         </div>
-        <div className="modal-form">
+        <div className="view-panel__form">
           <label>
             Device interval (seconds)
             <input
@@ -188,11 +163,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {isStartingAutoUpdate ? 'Starting…' : 'Start automatic updates'}
           </button>
           {autoUpdateMessage && (
-            <p className="modal-message">{autoUpdateMessage}</p>
+            <p className="view-panel__message">{autoUpdateMessage}</p>
           )}
         </div>
       </section>
-      <section className="modal-section">
+      <section className="view-panel__section">
         <h3>Device List Layout</h3>
         <p>Switch between gallery cards and a simple list.</p>
         <label className="protocol-option">
@@ -216,18 +191,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           List
         </label>
       </section>
-    </div>
-  );
-
-  if (isInline) {
-    return content;
-  }
-
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      {content}
-    </div>
+    </section>
   );
 };
 
-export default SettingsModal;
+export default SettingsView;

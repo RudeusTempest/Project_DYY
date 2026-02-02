@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import '../Modal.css';
+import React, { useState } from 'react';
+import '../ViewPanel.css';
 import type { GroupWithMembers } from '../../api/groups';
 
-interface GroupSettingsModalProps {
-  isOpen: boolean;
+interface GroupSettingsViewProps {
   onClose: () => void;
   groups: GroupWithMembers[];
   onReloadGroups: () => Promise<void> | void;
@@ -11,11 +10,9 @@ interface GroupSettingsModalProps {
   onAssignDeviceToGroup: (groupName: string, deviceMac: string) => Promise<void>;
   onRemoveDeviceFromGroup: (groupName: string, deviceMac: string) => Promise<void>;
   onDeleteGroup: (groupName: string) => Promise<void>;
-  variant?: 'modal' | 'inline';
 }
 
-const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
-  isOpen,
+const GroupSettingsView: React.FC<GroupSettingsViewProps> = ({
   onClose,
   groups,
   onReloadGroups,
@@ -23,7 +20,6 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   onAssignDeviceToGroup,
   onRemoveDeviceFromGroup,
   onDeleteGroup,
-  variant = 'modal',
 }) => {
   const [groupMessage, setGroupMessage] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
@@ -33,26 +29,6 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   const [removeGroupName, setRemoveGroupName] = useState('');
   const [removeDeviceMac, setRemoveDeviceMac] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
-
-  useEffect(() => {
-    if (isOpen || variant === 'inline') {
-      setGroupMessage(null);
-    }
-  }, [isOpen, variant]);
-
-  const isInline = variant === 'inline';
-
-  if (!isInline && !isOpen) {
-    return null;
-  }
-
-  const handleOverlayClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    if (!isInline && event.target === event.currentTarget) {
-      onClose();
-    }
-  };
 
   const handleGroupAction = async (
     action: () => Promise<void>,
@@ -69,38 +45,31 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     }
   };
 
-  const content = (
-    <div className={`modal ${isInline ? 'modal--inline' : ''}`}>
-      {!isInline && (
-        <button className="modal-close" onClick={onClose}>
-          ×
-        </button>
-      )}
-      <div className="modal-inline-header">
+  return (
+    <section className="view-panel">
+      <div className="view-panel__header">
         <div>
           <h2>Group Management</h2>
-          <p className="modal-muted">
+          <p className="view-panel__muted">
             Manage device groups. Actions will fail if the backend endpoint is unavailable.
           </p>
         </div>
-        {isInline && (
-          <button
-            type="button"
-            className="inline-close-button"
-            onClick={onClose}
-          >
-            Back to devices
-          </button>
-        )}
+        <button
+          type="button"
+          className="view-panel__back-button"
+          onClick={onClose}
+        >
+          Back to devices
+        </button>
       </div>
 
-      <section className="modal-section">
+      <section className="view-panel__section">
         <div className="group-list">
           <div className="group-list__header">
             <span>Groups ({groups.length})</span>
             <button
               type="button"
-              className="modal-ghost-button"
+              className="view-panel__ghost-button"
               onClick={() =>
                 handleGroupAction(
                   async () => {
@@ -114,14 +83,14 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             </button>
           </div>
           {groups.length === 0 ? (
-            <p className="modal-muted">No groups found.</p>
+            <p className="view-panel__muted">No groups found.</p>
           ) : (
             <ul className="group-list__items">
               {groups.map((group) => (
                 <li key={group.group} className="group-list__item">
                   <div>
                     <strong>{group.group}</strong>
-                    <p className="modal-muted">
+                    <p className="view-panel__muted">
                       {group.device_macs?.length ?? 0} device(s)
                     </p>
                   </div>
@@ -146,7 +115,7 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
         <div className="group-forms">
           <div className="group-form">
             <h4>Add group</h4>
-            <div className="modal-form">
+            <div className="view-panel__form">
               <label>
                 Group name
                 <input
@@ -188,7 +157,7 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
 
           <div className="group-form">
             <h4>Assign device to group</h4>
-            <div className="modal-form">
+            <div className="view-panel__form">
               <label>
                 Group name
                 <input
@@ -234,7 +203,7 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
 
           <div className="group-form">
             <h4>Remove device from group</h4>
-            <div className="modal-form">
+            <div className="view-panel__form">
               <label>
                 Group name
                 <input
@@ -280,11 +249,11 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
 
           <div className="group-form">
             <h4>Delete group (pre-wired)</h4>
-            <p className="modal-muted">
+            <p className="view-panel__muted">
               Calls the future <code>/groups/delete_group</code> endpoint when
               available.
             </p>
-            <div className="modal-form">
+            <div className="view-panel__form">
               <label>
                 Group name
                 <input
@@ -313,20 +282,12 @@ const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             </div>
           </div>
         </div>
-        {groupMessage && <p className="modal-message">{groupMessage}</p>}
+        {groupMessage && (
+          <p className="view-panel__message">{groupMessage}</p>
+        )}
       </section>
-    </div>
-  );
-
-  if (isInline) {
-    return content;
-  }
-
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      {content}
-    </div>
+    </section>
   );
 };
 
-export default GroupSettingsModal;
+export default GroupSettingsView;

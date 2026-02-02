@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import './DeviceDetailsModal.css';
-import {
-  DeviceRecord,
-  ProtocolMethod,
-} from '../../api/devices';
+import '../ViewPanel.css';
+import './DeviceDetailsView.css';
+import { type DeviceRecord, type ProtocolMethod } from '../../api/devices';
 import { resolveDeviceIp } from '../../utils/deviceUtils';
 import DeviceGroupsTab from './DeviceGroupsTab';
 
@@ -16,31 +14,28 @@ const stepConfig = [
 
 export type DeviceDetailsStepId = (typeof stepConfig)[number]['id'];
 
-interface DeviceDetailsModalProps {
+interface DeviceDetailsViewProps {
   device: DeviceRecord | null;
   protocol: ProtocolMethod;
   onProtocolChange: (method: ProtocolMethod) => void;
   onClose: () => void;
   initialStep?: DeviceDetailsStepId;
   onStepChange?: (step: DeviceDetailsStepId, label: string) => void;
-  variant?: 'modal' | 'inline';
 }
 
 // Detailed look at a single device with paginated sections to avoid long
 // scrolling.
-const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
+const DeviceDetailsView: React.FC<DeviceDetailsViewProps> = ({
   device,
   protocol,
   onProtocolChange,
   onClose,
   initialStep = 'details',
   onStepChange,
-  variant = 'modal',
 }) => {
   const [activeStep, setActiveStep] = useState<DeviceDetailsStepId>(
     initialStep ?? 'details'
   );
-  const isInline = variant === 'inline';
 
   const getStepLabel = (step: DeviceDetailsStepId) =>
     stepConfig.find((config) => config.id === step)?.label ?? step;
@@ -54,29 +49,6 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     setActiveStep(nextStep);
     onStepChange?.(nextStep, getStepLabel(nextStep));
   }, [device, initialStep, onStepChange]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !device || isInline) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [device, isInline, onClose]);
-
-  const handleOverlayClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    if (!isInline && event.target === event.currentTarget) {
-      onClose();
-    }
-  };
 
   const setStep = (step: DeviceDetailsStepId) => {
     setActiveStep(step);
@@ -242,21 +214,22 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
       </div>
 
       <div className="panel">
-        <div className="modal-protocol-toggle">
+        <div className="details-protocol-toggle">
           <div>
             <h3>Update method</h3>
-            <p className="modal-protocol-toggle__note">
+            <p className="details-protocol-toggle__note">
               Applies only to this device.
             </p>
           </div>
-          <div className="modal-protocol-toggle__actions">
-            <span className="modal-protocol-toggle__pill">
+          <div className="details-protocol-toggle__actions">
+            <span className="details-protocol-toggle__pill">
               {hasDeviceIp
                 ? `Using ${protocol.toUpperCase()}`
                 : 'No IP available'}
             </span>
             <button
-              className="modal-protocol-toggle__button"
+              className="details-protocol-toggle__button"
+              type="button"
               onClick={handleProtocolToggle}
               disabled={!hasDeviceIp}
             >
@@ -299,8 +272,8 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         {device.interfaces.length === 0 ? (
           <p>No interface data available.</p>
         ) : (
-          <div className="modal-table">
-            <div className="modal-table__header">
+          <div className="details-table">
+            <div className="details-table__header">
               <span>Name</span>
               <span>IP Address</span>
               <span>Status</span>
@@ -311,7 +284,7 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
               <span>MTU</span>
             </div>
             {device.interfaces.map((iface) => (
-              <div key={iface.interface} className="modal-table__row">
+              <div key={iface.interface} className="details-table__row">
                 <span>{iface.interface}</span>
                 <span>{iface.ip_address}</span>
                 <span>{iface.status}</span>
@@ -365,7 +338,7 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
             {device.neighbors.map((neighbor) => (
               <li key={`${neighbor.device_id}-${neighbor.local_interface}`}>
                 <strong>{neighbor.device_id}</strong> via {neighbor.local_interface}
-                {neighbor.port_id ? ` → ${neighbor.port_id}` : ''}
+                {neighbor.port_id ? ` -> ${neighbor.port_id}` : ''}
               </li>
             ))}
           </ul>
@@ -387,48 +360,36 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
     }
   };
 
-  const content = (
-    <div
-      className={`modal-content modal-content--paged ${
-        isInline ? 'modal-content--inline' : ''
-      }`}
-    >
-      {!isInline && (
-        <button className="modal-close" onClick={onClose}>
-          ×
-        </button>
-      )}
-
-      <div className="modal-header">
-        <div className="modal-header__row">
-          <div className="modal-header__title">
+  return (
+    <section className="view-panel details-view">
+      <div className="details-header">
+        <div className="details-header__row">
+          <div className="details-header__title">
             <h2>{device.hostname}</h2>
             <span className={`status-chip status-chip--${status}`}>
               {status}
             </span>
           </div>
-          {isInline && (
-            <button
-              className="nav-button nav-button--ghost"
-              type="button"
-              onClick={onClose}
-            >
-              Back to devices
-            </button>
-          )}
+          <button
+            className="nav-button nav-button--ghost"
+            type="button"
+            onClick={onClose}
+          >
+            Back to devices
+          </button>
         </div>
-        <p className="modal-subtitle">
-          IP {deviceIpLabel} · MAC {device.mac} · Updated {device.lastUpdatedAt}
+        <p className="details-subtitle">
+          IP {deviceIpLabel} | MAC {device.mac} | Updated {device.lastUpdatedAt}
         </p>
       </div>
 
-      <div className="modal-steps">
+      <div className="details-steps">
         {stepConfig.map((step) => {
           const isActive = step.id === activeStep;
           return (
             <button
               key={step.id}
-              className={`modal-step ${isActive ? 'modal-step--active' : ''}`}
+              className={`details-step ${isActive ? 'details-step--active' : ''}`}
               onClick={() => setStep(step.id)}
               type="button"
             >
@@ -438,21 +399,19 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
         })}
       </div>
 
-      <div className={`modal-body ${isInline ? 'modal-body--inline' : ''}`}>
-        {renderStepContent()}
-      </div>
+      <div className="details-body">{renderStepContent()}</div>
 
-      <div className="modal-footer">
-        <span className="modal-footer__progress">
+      <div className="details-footer">
+        <span className="details-footer__progress">
           Step {currentStepIndex + 1} of {stepConfig.length}
         </span>
-        <div className="modal-footer__actions">
+        <div className="details-footer__actions">
           <button
             className="nav-button nav-button--ghost"
             type="button"
             onClick={onClose}
           >
-            {isInline ? 'Back to devices' : 'Close'}
+            Back to devices
           </button>
           <button
             className="nav-button"
@@ -471,18 +430,8 @@ const DeviceDetailsModal: React.FC<DeviceDetailsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
-  );
-
-  if (isInline) {
-    return content;
-  }
-
-  return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      {content}
-    </div>
+    </section>
   );
 };
 
-export default DeviceDetailsModal;
+export default DeviceDetailsView;

@@ -12,7 +12,7 @@ interface DeviceCardProps {
 }
 
 // Shows the main snapshot for a single device. Clicking anywhere (except the
-// update button) opens the detailed modal.
+// update button) opens the detailed view.
 const DeviceCard: React.FC<DeviceCardProps> = ({
   device,
   status,
@@ -28,7 +28,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
   ).length;
 
   const handleRefreshClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    // Prevent the click from bubbling up so it does not open the modal.
+    // Prevent the click from bubbling up so it does not open the view.
     event.stopPropagation();
     if (!deviceIp) {
       return;
