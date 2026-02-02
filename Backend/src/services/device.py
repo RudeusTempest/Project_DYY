@@ -8,6 +8,8 @@ from src.services.white_list import WhiteListService
 from src.config.settings import settings
 from typing import Optional, Dict, List, Any
 import asyncio
+from src.utils.web_socket import broadcast_alert
+import re
 
 
 class DeviceService:
@@ -141,6 +143,7 @@ class DeviceService:
             print(f"Error getting latest records: {e}")
             return []
 
+
     @staticmethod
     async def get_one_record(ip: str) -> List[Dict[str, Any]]:
         try:
@@ -241,7 +244,7 @@ class DeviceService:
             # Try to connect via CLI to fetch configuration
             connection = ConnectionService.connect(cred)
             if not connection:
-                print(f"Could not establish CLI connection to fetch config for device {ip}")
+                print(f"Could not establish connection to fetch config for device {ip}")
                 return
             
             config_output = None
@@ -274,19 +277,38 @@ class DeviceService:
 
 
     @staticmethod
-    async def poll_config_loop(cred):
+    async def poll_config_loop():
         while True:
             try:
                 creds = await CredentialsService.get_all_cred()
                 for cred in creds:
                     await DeviceService.capture_and_save_config(cred)
-                    current_config = await DeviceService.get_current_config(cred.get("ip"))
                     differences = await DeviceService.get_config_differences(cred.get("ip"))
                     white_list = await WhiteListService.get_white_list() 
+
                     for dict in white_list:
-                        if dict["words"] in differences["added_lines"] or dict["words"] in differences["deleted_lines"]:
-                            print("---------------------Alert frontend---------------------")
-                            print("---------------------Alert frontend---------------------")
+                        header = re.escape(dict["words"])
+                        pattern = re.compile(rf"^\s*{header}\b", re.MULTILINE)
+                        added_lines = differences["added_lines"]
+                        deleted_lines = differences["deleted_lines"]
+                        
+                        for line in added_lines:
+                            added = pattern.search(line or "")
+
+                        for line in deleted_lines:
+                            deleted = pattern.search(line or "")
+
+                        if added or deleted:
+                            await broadcast_alert({
+                                "Alert": f"{dict['words']} changed!"
+                            })
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
+                            print("---------------------Alerted frontend---------------------")
                 await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        

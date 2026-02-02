@@ -1,7 +1,8 @@
 from src.controllers.white_list import WhiteListController
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
-import asyncio
+from fastapi import APIRouter, WebSocket
+from src.utils.web_socket import connect, disconnect
 
 
 router = APIRouter()
@@ -29,4 +30,14 @@ async def delete_words(word_id: int) -> Dict[str, Any]:
         return await WhiteListController.delete_words(word_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete words: {str(e)}")
+
+
+@router.websocket("/ws/alerts")
+async def alerts_socket(ws: WebSocket):
+    await connect(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except:
+        disconnect(ws)
 
