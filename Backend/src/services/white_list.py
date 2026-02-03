@@ -14,5 +14,5 @@ class WhiteListService:
         return await WhiteListRepo.get_white_list()
 
     @staticmethod
-    async def delete_words(word_id: int) -> Dict[str, Any]:
-        return await WhiteListRepo.delete_words(word_id)
+    async def delete_word(word: str) -> Dict[str, Any]:
+        return await WhiteListRepo.delete_word(word)
