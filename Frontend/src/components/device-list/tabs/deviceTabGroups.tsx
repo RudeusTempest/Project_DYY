@@ -4,22 +4,24 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { type DeviceRecord } from '../../api/devices';
+import { type DeviceRecord } from '../../../api/devices';
 import {
   addGroup,
   assignDeviceToGroup,
   deleteDeviceFromGroup,
   fetchAllGroups,
   type GroupWithMembers,
-} from '../../api/groups';
-import { normalizeMac } from '../../utils/deviceUtils';
+} from '../../../api/groups';
+import { normalizeMac } from '../../../utils/deviceUtils';
 
-interface DeviceGroupsTabProps {
+interface DeviceTabGroupsProps {
   device: DeviceRecord;
 }
 
 // Standalone tab that manages group membership for a single device.
-const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ device }) => {
+const DeviceTabGroups: React.FC<DeviceTabGroupsProps> = ({
+  device,
+}) => {
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
@@ -264,4 +266,4 @@ const DeviceGroupsTab: React.FC<DeviceGroupsTabProps> = ({ device }) => {
   );
 };
 
-export default DeviceGroupsTab;
+export default DeviceTabGroups;
