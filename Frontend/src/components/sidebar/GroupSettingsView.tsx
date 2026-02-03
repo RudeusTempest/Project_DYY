@@ -112,174 +112,211 @@ const GroupSettingsView: React.FC<GroupSettingsViewProps> = ({
           )}
         </div>
 
-        <div className="group-forms">
-          <div className="group-form">
-            <h4>Add group</h4>
-            <div className="view-panel__form">
-              <label>
-                Group name
-                <input
-                  type="text"
-                  value={newGroupName}
-                  onChange={(event) => setNewGroupName(event.target.value)}
-                  placeholder="e.g., datacenter"
-                />
-              </label>
-              <label>
-                Device MACs (comma-separated)
-                <input
-                  type="text"
-                  value={newGroupMacs}
-                  onChange={(event) => setNewGroupMacs(event.target.value)}
-                  placeholder="aa:bb:cc:dd:ee:ff, 11:22:33:44:55:66"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  handleGroupAction(
-                    async () => {
-                      const macs = newGroupMacs
-                        .split(',')
-                        .map((mac) => mac.trim());
-                      await onAddGroup(newGroupName, macs);
-                      setNewGroupName('');
-                      setNewGroupMacs('');
-                    },
-                    'Group added.'
-                  )
-                }
-              >
-                Add group
-              </button>
-            </div>
-          </div>
-
-          <div className="group-form">
-            <h4>Assign device to group</h4>
-            <div className="view-panel__form">
-              <label>
-                Group name
-                <input
-                  type="text"
-                  value={assignGroupName}
-                  onChange={(event) =>
-                    setAssignGroupName(event.target.value)
-                  }
-                  placeholder="apple"
-                />
-              </label>
-              <label>
-                Device MAC
-                <input
-                  type="text"
-                  value={assignDeviceMac}
-                  onChange={(event) =>
-                    setAssignDeviceMac(event.target.value)
-                  }
-                  placeholder="50:00:00:04:00:00"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  handleGroupAction(
-                    async () => {
-                      await onAssignDeviceToGroup(
-                        assignGroupName,
-                        assignDeviceMac
-                      );
-                      setAssignGroupName('');
-                      setAssignDeviceMac('');
-                    },
-                    'Device assigned to group.'
-                  )
-                }
-              >
-                Assign
-              </button>
-            </div>
-          </div>
-
-          <div className="group-form">
-            <h4>Remove device from group</h4>
-            <div className="view-panel__form">
-              <label>
-                Group name
-                <input
-                  type="text"
-                  value={removeGroupName}
-                  onChange={(event) =>
-                    setRemoveGroupName(event.target.value)
-                  }
-                  placeholder="apple"
-                />
-              </label>
-              <label>
-                Device MAC
-                <input
-                  type="text"
-                  value={removeDeviceMac}
-                  onChange={(event) =>
-                    setRemoveDeviceMac(event.target.value)
-                  }
-                  placeholder="50:00:00:04:00:00"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  handleGroupAction(
-                    async () => {
-                      await onRemoveDeviceFromGroup(
-                        removeGroupName,
-                        removeDeviceMac
-                      );
-                      setRemoveGroupName('');
-                      setRemoveDeviceMac('');
-                    },
-                    'Device removed from group.'
-                  )
-                }
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-
-          <div className="group-form">
-            <h4>Delete group (pre-wired)</h4>
+        <div className="group-actions">
+          <div className="group-actions__header">
+            <h3>Group actions</h3>
             <p className="view-panel__muted">
-              Calls the future <code>/groups/delete_group</code> endpoint when
-              available.
+              Pick an action and fill in the details.
             </p>
-            <div className="view-panel__form">
-              <label>
-                Group name
-                <input
-                  type="text"
-                  value={deleteGroupName}
-                  onChange={(event) =>
-                    setDeleteGroupName(event.target.value)
+          </div>
+          <div className="group-action-grid">
+            <article className="group-action-card group-action-card--create">
+              <div className="group-action-card__header">
+                <div>
+                  <h4>Add group</h4>
+                  <p className="view-panel__muted">
+                    Create a new group and optionally attach devices.
+                  </p>
+                </div>
+                <span className="group-action-card__badge">Create</span>
+              </div>
+              <div className="view-panel__form group-action-form">
+                <label>
+                  Group name
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(event) => setNewGroupName(event.target.value)}
+                    placeholder="e.g., datacenter"
+                  />
+                </label>
+                <label>
+                  Device MACs (comma-separated)
+                  <input
+                    type="text"
+                    value={newGroupMacs}
+                    onChange={(event) => setNewGroupMacs(event.target.value)}
+                    placeholder="aa:bb:cc:dd:ee:ff, 11:22:33:44:55:66"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleGroupAction(
+                      async () => {
+                        const macs = newGroupMacs
+                          .split(',')
+                          .map((mac) => mac.trim());
+                        await onAddGroup(newGroupName, macs);
+                        setNewGroupName('');
+                        setNewGroupMacs('');
+                      },
+                      'Group added.'
+                    )
                   }
-                  placeholder="apple"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  handleGroupAction(
-                    async () => {
-                      await onDeleteGroup(deleteGroupName);
-                      setDeleteGroupName('');
-                    },
-                    'Delete request sent.'
-                  )
-                }
-              >
-                Delete group
-              </button>
-            </div>
+                >
+                  Add group
+                </button>
+              </div>
+            </article>
+
+            <article className="group-action-card group-action-card--assign">
+              <div className="group-action-card__header">
+                <div>
+                  <h4>Assign device</h4>
+                  <p className="view-panel__muted">
+                    Attach a device to an existing group.
+                  </p>
+                </div>
+                <span className="group-action-card__badge">Assign</span>
+              </div>
+              <div className="view-panel__form group-action-form">
+                <label>
+                  Group name
+                  <input
+                    type="text"
+                    value={assignGroupName}
+                    onChange={(event) =>
+                      setAssignGroupName(event.target.value)
+                    }
+                    placeholder="apple"
+                  />
+                </label>
+                <label>
+                  Device MAC
+                  <input
+                    type="text"
+                    value={assignDeviceMac}
+                    onChange={(event) =>
+                      setAssignDeviceMac(event.target.value)
+                    }
+                    placeholder="50:00:00:04:00:00"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleGroupAction(
+                      async () => {
+                        await onAssignDeviceToGroup(
+                          assignGroupName,
+                          assignDeviceMac
+                        );
+                        setAssignGroupName('');
+                        setAssignDeviceMac('');
+                      },
+                      'Device assigned to group.'
+                    )
+                  }
+                >
+                  Assign
+                </button>
+              </div>
+            </article>
+
+            <article className="group-action-card group-action-card--remove">
+              <div className="group-action-card__header">
+                <div>
+                  <h4>Remove device</h4>
+                  <p className="view-panel__muted">
+                    Detach a device from a group.
+                  </p>
+                </div>
+                <span className="group-action-card__badge">Remove</span>
+              </div>
+              <div className="view-panel__form group-action-form">
+                <label>
+                  Group name
+                  <input
+                    type="text"
+                    value={removeGroupName}
+                    onChange={(event) =>
+                      setRemoveGroupName(event.target.value)
+                    }
+                    placeholder="apple"
+                  />
+                </label>
+                <label>
+                  Device MAC
+                  <input
+                    type="text"
+                    value={removeDeviceMac}
+                    onChange={(event) =>
+                      setRemoveDeviceMac(event.target.value)
+                    }
+                    placeholder="50:00:00:04:00:00"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleGroupAction(
+                      async () => {
+                        await onRemoveDeviceFromGroup(
+                          removeGroupName,
+                          removeDeviceMac
+                        );
+                        setRemoveGroupName('');
+                        setRemoveDeviceMac('');
+                      },
+                      'Device removed from group.'
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            </article>
+
+            <article className="group-action-card group-action-card--danger">
+              <div className="group-action-card__header">
+                <div>
+                  <h4>Delete group</h4>
+                  <p className="view-panel__muted">
+                    Calls the future <code>/groups/delete_group</code> endpoint
+                    when available.
+                  </p>
+                </div>
+                <span className="group-action-card__badge">Delete</span>
+              </div>
+              <div className="view-panel__form group-action-form">
+                <label>
+                  Group name
+                  <input
+                    type="text"
+                    value={deleteGroupName}
+                    onChange={(event) =>
+                      setDeleteGroupName(event.target.value)
+                    }
+                    placeholder="apple"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleGroupAction(
+                      async () => {
+                        await onDeleteGroup(deleteGroupName);
+                        setDeleteGroupName('');
+                      },
+                      'Delete request sent.'
+                    )
+                  }
+                >
+                  Delete group
+                </button>
+              </div>
+            </article>
           </div>
         </div>
         {groupMessage && (

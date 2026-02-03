@@ -192,6 +192,120 @@
   color: var(--text-color);
 }
 
+.group-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+
+.group-actions__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.group-actions__header h3 {
+  margin: 0;
+}
+
+.group-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.group-action-card {
+  padding: 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 230px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+.group-action-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.group-action-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.group-action-card__header h4 {
+  margin: 0;
+}
+
+.group-action-card__header .view-panel__muted {
+  margin: 0.15rem 0 0;
+}
+
+.group-action-card__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--muted-text);
+  white-space: nowrap;
+}
+
+.group-action-card--create {
+  border-color: var(--status-active);
+}
+
+.group-action-card--create .group-action-card__badge {
+  border-color: var(--status-active);
+  color: var(--status-active);
+}
+
+.group-action-card--assign {
+  border-color: var(--status-warning);
+}
+
+.group-action-card--assign .group-action-card__badge {
+  border-color: var(--status-warning);
+  color: var(--status-warning);
+}
+
+.group-action-card--remove {
+  border-color: var(--status-unauthorized);
+}
+
+.group-action-card--remove .group-action-card__badge {
+  border-color: var(--status-unauthorized);
+  color: var(--status-unauthorized);
+}
+
+.group-action-card--danger {
+  border-color: var(--status-inactive);
+}
+
+.group-action-card--danger .group-action-card__badge {
+  border-color: var(--status-inactive);
+  color: var(--status-inactive);
+}
+
+.group-action-form {
+  margin-top: 0;
+}
+
+.group-action-form button {
+  width: 100%;
+}
+
 .group-forms {
   display: grid;
   gap: 0.75rem;
