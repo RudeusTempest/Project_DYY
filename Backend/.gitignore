@@ -5,4 +5,4 @@ __pycache__/
 # Ignore large installers
 *.msi
 
-src/config/settings.py
+.env
