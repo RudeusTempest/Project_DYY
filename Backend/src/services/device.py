@@ -303,12 +303,7 @@ class DeviceService:
                                 "Alert": f"{dict['words']} changed!"
                             })
                             print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
-                            print("---------------------Alerted frontend---------------------")
+
                 await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        
