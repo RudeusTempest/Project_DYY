@@ -32,6 +32,7 @@ class WhiteListRepo:
                 pass
             raise
 
+
     @staticmethod
     async def get_white_list() -> List[Dict[str, Any]]:
         """
@@ -41,19 +42,20 @@ class WhiteListRepo:
             async with AsyncSessionLocal() as session:
                 result = await session.execute(select(WhiteList))
                 words = result.scalars().all()
-                return [{"id": word.id, "words": word.words} for word in words]
+                return [{"words": word.words} for word in words]
         except Exception as e:
             print(f"Error retrieving words: {e}")
             raise
 
+
     @staticmethod
-    async def delete_words(word_id: int) -> Dict[str, Any]:
+    async def delete_word(word: str) -> Dict[str, Any]:
         """
         Delete a word entry by id.
         """
         try:
             async with AsyncSessionLocal() as session:
-                result = await session.execute(select(WhiteList).where(WhiteList.id == word_id))
+                result = await session.execute(select(WhiteList).where(WhiteList.words == word ))
                 word = result.scalar_one_or_none()
                 if word:
                     await session.delete(word)

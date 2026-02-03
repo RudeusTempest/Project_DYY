@@ -24,10 +24,10 @@ async def get_white_list() -> List[Dict[str, Any]]:
         raise HTTPException(status_code=500, detail=f"Failed to get white list: {str(e)}")
 
 
-@router.delete("/delete_words/{word_id}")
-async def delete_words(word_id: int) -> Dict[str, Any]:
+@router.delete("/delete_words/{word}")
+async def delete_word(word: str) -> Dict[str, Any]:
     try:
-        return await WhiteListController.delete_words(word_id)
+        return await WhiteListController.delete_word(word)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete words: {str(e)}")
 
