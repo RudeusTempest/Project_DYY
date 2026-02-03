@@ -1,17 +1,22 @@
-from netmiko import ConnectHandler
+from src.repositories.postgres.white_list import WhiteListRepo
+import asyncio
 
-device = {
-    "device_type": "cisco_ios",
-    "host": "192.170.0.78",
-    "username": "net",
-    "password": "Aa123456!",
-    "timeout": 10,
-}
 
-conn = ConnectHandler(**device)
-config = conn.send_command("show running-config")
-print(config)
-conn.disconnect()
+
+# from netmiko import ConnectHandler
+
+# device = {
+#     "device_type": "cisco_ios",
+#     "host": "192.170.0.78",
+#     "username": "net",
+#     "password": "Aa123456!",
+#     "timeout": 10,
+# }
+
+# conn = ConnectHandler(**device)
+# config = conn.send_command("show running-config")
+# print(config)
+# conn.disconnect()
 
 
 
