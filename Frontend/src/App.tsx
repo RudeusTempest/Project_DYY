@@ -16,6 +16,7 @@ import { getAvailableDeviceTypes } from './utils/deviceUtils';
 
 const deviceStepLabels: Record<DeviceDetailsStepId, string> = {
   details: 'Details',
+  config: 'Config',
   interfaces: 'Interfaces',
   ports: 'Ports',
   groups: 'Groups',

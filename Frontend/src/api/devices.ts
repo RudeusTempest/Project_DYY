@@ -50,12 +50,39 @@ export interface DeviceRecord {
 
 export type DeviceStatus = 'active' | 'inactive' | 'unauthorized';
 
+export interface DeviceConfigDifferences {
+  ip: string;
+  added_lines: string[];
+  deleted_lines: string[];
+  full_config_lines: string[];
+  added_lines_indexes: number[];
+}
+
+export interface DeviceConfigHistoryEntry {
+  id: number;
+  mac_address: string;
+  configuration: string;
+  queried_at: string;
+}
+
 const API_BASE_URL = 'http://localhost:8000';
 
 const toNumber = (value: unknown): number | undefined => {
   const parsed = Number(value);
   return Number.isNaN(parsed) ? undefined : parsed;
 };
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+
+const toNumberArray = (value: unknown): number[] =>
+  Array.isArray(value)
+    ? value
+        .map((item) => toNumber(item))
+        .filter((item): item is number => typeof item === 'number')
+    : [];
 
 // Small helper that turns whatever the backend sends into a clean interface
 // object. This keeps undefined/null safeguards in one place.
@@ -290,6 +317,73 @@ export const fetchAllDevices = async (): Promise<DeviceRecord[]> => {
   }
 
   return json.map((device) => normalizeDeviceRecord(device));
+};
+
+export const fetchConfigDifferences = async (
+  ip: string
+): Promise<DeviceConfigDifferences> => {
+  const response = await fetch(
+    `${API_BASE_URL}/devices/config/differences?ip=${encodeURIComponent(ip)}`
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Unable to load config differences (${response.status}): ${detail ?? ''}`
+    );
+  }
+
+  const json = await response.json();
+  if (!json || typeof json !== 'object') {
+    return {
+      ip,
+      added_lines: [],
+      deleted_lines: [],
+      full_config_lines: [],
+      added_lines_indexes: [],
+    };
+  }
+
+  return {
+    ip: typeof (json as any).ip === 'string' ? (json as any).ip : ip,
+    added_lines: toStringArray((json as any).added_lines),
+    deleted_lines: toStringArray((json as any).deleted_lines),
+    full_config_lines: toStringArray((json as any).full_config_lines),
+    added_lines_indexes: toNumberArray((json as any).added_lines_indexes),
+  };
+};
+
+export const fetchConfigHistory = async (
+  ip: string
+): Promise<DeviceConfigHistoryEntry[]> => {
+  const response = await fetch(
+    `${API_BASE_URL}/devices/config/history?ip=${encodeURIComponent(ip)}`
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Unable to load config history (${response.status}): ${detail ?? ''}`
+    );
+  }
+
+  const json = await response.json();
+  if (!Array.isArray(json)) {
+    return [];
+  }
+
+  return json.map((entry) => {
+    const record = entry as any;
+    return {
+      id: typeof record?.id === 'number' ? record.id : 0,
+      mac_address:
+        typeof record?.mac_address === 'string' ? record.mac_address : '',
+      configuration:
+        typeof record?.configuration === 'string' ? record.configuration : '',
+      queried_at:
+        typeof record?.queried_at === 'string' ? record.queried_at : '',
+    };
+  });
 };
 
 export const fetchDeviceByIp = async (

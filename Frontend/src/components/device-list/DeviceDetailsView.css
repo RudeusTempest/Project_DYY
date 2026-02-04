@@ -355,6 +355,113 @@
   gap: 0.4rem;
 }
 
+.config-diffs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.config-pane {
+  min-height: 320px;
+}
+
+.config-pane__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.config-pane__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.config-pane__nav .inline-button {
+  min-width: 32px;
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: #fff;
+  transition: opacity 0.2s ease;
+}
+
+.config-pane__nav .inline-button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.config-pane__index {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.config-pane__index input {
+  width: 72px;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  text-align: center;
+}
+
+.config-pane__index-total {
+  color: var(--muted-text);
+  font-size: 0.85rem;
+}
+
+.config-lines {
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  border-radius: 8px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-height: 420px;
+  overflow: auto;
+  font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.config-lines--empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.config-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.config-line__number {
+  width: 2.5rem;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--muted-text);
+}
+
+.config-line__content {
+  white-space: pre;
+}
+
+.config-line--added {
+  background-color: rgba(22, 163, 74, 0.12);
+  color: var(--status-active);
+}
+
+.config-line--deleted {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: var(--status-inactive);
+}
+
 .details-footer {
   display: flex;
   justify-content: space-between;
@@ -404,7 +511,7 @@
 }
 
 .nav-button--ghost {
-  background-color: transparent;
-  border-color: transparent;
-  color: var(--muted-text);
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
 }

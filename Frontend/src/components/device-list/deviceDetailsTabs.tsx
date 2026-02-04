@@ -1,6 +1,7 @@
 import React from 'react';
 import { type DeviceRecord, type ProtocolMethod } from '../../api/devices';
 import DeviceTabDetails from './tabs/deviceTabDetails';
+import DeviceTabConfigDiffs from './tabs/deviceTabConfigDiffs';
 import DeviceTabInterfaces from './tabs/deviceTabInterfaces';
 import DeviceTabPorts from './tabs/deviceTabPorts';
 import DeviceTabGroups from './tabs/deviceTabGroups';
@@ -22,6 +23,17 @@ export const deviceDetailsTabs = [
         device={context.device}
         protocol={context.protocol}
         onProtocolChange={context.onProtocolChange}
+        deviceIpLabel={context.deviceIpLabel}
+        hasDeviceIp={context.hasDeviceIp}
+      />
+    ),
+  },
+  {
+    id: 'config',
+    label: 'Config',
+    render: (context: DeviceDetailsTabContext) => (
+      <DeviceTabConfigDiffs
+        device={context.device}
         deviceIpLabel={context.deviceIpLabel}
         hasDeviceIp={context.hasDeviceIp}
       />

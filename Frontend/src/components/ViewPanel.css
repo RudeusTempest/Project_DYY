@@ -18,17 +18,18 @@
 }
 
 .view-panel__back-button {
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-color);
+  border: 1px solid var(--accent-color);
+  background-color: var(--accent-color);
+  color: #fff;
   padding: 0.45rem 0.8rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
 .view-panel__back-button:hover {
-  background-color: var(--input-bg);
+  opacity: 0.85;
 }
 
 .view-panel__section {
