@@ -10,6 +10,7 @@ from typing import Optional, Dict, List, Any
 import asyncio
 from src.utils.web_socket import broadcast_alert
 import re
+from datetime import datetime
 
 
 class DeviceService:
@@ -209,6 +210,38 @@ class DeviceService:
         except Exception as e:
             print(f"Error getting config differences for IP {ip}: {e}")
             return None
+        
+
+    @staticmethod
+    async def normalize_config(config: str) -> str:
+        """
+        Remove non-meaningful lines (timestamps, build info, etc.)
+        so configs can be compared meaningfully.
+        """
+        normalized_lines = []
+
+        for line in config.splitlines():
+            line = line.strip()
+
+            # Skip empty lines
+            if not line:
+                continue
+
+            # Skip timestamp lines (IOS XR example)
+            if re.match(r"^[A-Z][a-z]{2}\s[A-Z][a-z]{2}\s+\d+\s\d{2}:\d{2}:\d{2}", line):
+                continue
+
+            # Skip known noisy lines
+            if line.startswith("Building configuration"):
+                continue
+            if line.startswith("!! IOS XR Configuration"):
+                continue
+            if line.startswith("!! Last configuration change"):
+                continue
+
+            normalized_lines.append(line)
+
+        return "\n".join(normalized_lines)    
 
 
     @staticmethod
@@ -264,11 +297,14 @@ class DeviceService:
                     pass
             
             if config_output:
-                from datetime import datetime
-                
-                # Save configuration to database (will automatically archive old config if exists)
-                await ConfigRepo.save_config(mac_address, config_output, datetime.now())
-                print(f"Successfully captured and saved configuration for device {mac_address} ({ip})")
+                normalized_new_config = DeviceService.normalize_config(config_output)
+                normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+
+                # Only save if the configuration changed
+                if normalized_new_config != normalized_old_config:
+                    # Save configuration to database (will automatically archive old config if exists)
+                    await ConfigRepo.save_config(mac_address, config_output, datetime.now())
+                    print(f"Successfully captured and saved configuration for device {mac_address} ({ip})")
             else:
                 print(f"No configuration data retrieved for device {ip}")
                 
@@ -450,9 +486,14 @@ class DeviceService:
                 # Save configuration to database
                 if config_output:
                     try:
-                        from datetime import datetime
-                        await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
-                        print(f"Successfully saved configuration for device {extracted_mac}")
+                        normalized_new_config = DeviceService.normalize_config(config_output)
+                        normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+
+                        # Only save if the configuration changed
+                        if normalized_new_config != normalized_old_config:
+
+                            await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
+                            print(f"Successfully saved configuration for device {extracted_mac}")
                     except Exception as e:
                         print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
                 
@@ -492,9 +533,14 @@ class DeviceService:
                 # Save configuration to database
                 if config_output:
                     try:
-                        from datetime import datetime
-                        await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
-                        print(f"Successfully saved configuration for device {extracted_mac}")
+                        normalized_new_config = DeviceService.normalize_config(config_output)
+                        normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+
+                        # Only save if the configuration changed
+                        if normalized_new_config != normalized_old_config:
+                            
+                            await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
+                            print(f"Successfully saved configuration for device {extracted_mac}")
                     except Exception as e:
                         print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
 
