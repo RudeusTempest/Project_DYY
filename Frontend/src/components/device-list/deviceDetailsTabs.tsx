@@ -5,6 +5,7 @@ import DeviceTabConfigDiffs from './tabs/deviceTabConfigDiffs';
 import DeviceTabInterfaces from './tabs/deviceTabInterfaces';
 import DeviceTabPorts from './tabs/deviceTabPorts';
 import DeviceTabGroups from './tabs/deviceTabGroups';
+import DeviceTabWhiteList from './tabs/deviceTabWhiteList';
 
 export interface DeviceDetailsTabContext {
   device: DeviceRecord;
@@ -58,6 +59,13 @@ export const deviceDetailsTabs = [
     label: 'Groups',
     render: (context: DeviceDetailsTabContext) => (
       <DeviceTabGroups device={context.device} />
+    ),
+  },
+  {
+    id: 'white-list',
+    label: 'White list',
+    render: (context: DeviceDetailsTabContext) => (
+      <DeviceTabWhiteList device={context.device} />
     ),
   },
 ] as const;

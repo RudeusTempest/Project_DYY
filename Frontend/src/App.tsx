@@ -20,6 +20,7 @@ const deviceStepLabels: Record<DeviceDetailsStepId, string> = {
   interfaces: 'Interfaces',
   ports: 'Ports',
   groups: 'Groups',
+  'white-list': 'White list',
 };
 
 const AppContent: React.FC = () => {

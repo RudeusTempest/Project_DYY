@@ -312,6 +312,116 @@
   cursor: not-allowed;
 }
 
+.white-list__items {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.white-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+}
+
+.white-list__word {
+  font-weight: 600;
+  word-break: break-word;
+  flex: 1;
+}
+
+.white-list__delete {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--status-unauthorized, #d64545);
+  font-weight: 700;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.white-list__delete:hover:not(:disabled) {
+  background-color: rgba(214, 69, 69, 0.12);
+  border-color: rgba(214, 69, 69, 0.35);
+}
+
+.white-list__delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.white-list__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.white-list__form input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.white-list__form input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.white-list__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.white-list__alerts {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.white-list__alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+}
+
+.white-list__alert-text {
+  font-weight: 600;
+  word-break: break-word;
+  flex: 1;
+}
+
+.white-list__alert-time {
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  white-space: nowrap;
+}
+
 .port-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
