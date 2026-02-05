@@ -4,23 +4,25 @@ import {
   addWhiteListWord,
   deleteWhiteListWord,
   fetchWhiteList,
-  getWhiteListSocketUrl,
   type WhiteListEntry,
 } from '../../../api/whiteList';
+import { type AlertItem, type AlertSocketStatus } from '../../../hooks/useAlerts';
 
 interface DeviceTabWhiteListProps {
   device: DeviceRecord;
+  alerts: AlertItem[];
+  socketStatus: AlertSocketStatus;
+  socketError: string | null;
+  onClearAlerts: () => void;
 }
 
-interface AlertItem {
-  id: string;
-  message: string;
-  receivedAt: string;
-}
-
-const MAX_ALERTS = 12;
-
-const DeviceTabWhiteList: React.FC<DeviceTabWhiteListProps> = ({ device }) => {
+const DeviceTabWhiteList: React.FC<DeviceTabWhiteListProps> = ({
+  device,
+  alerts,
+  socketStatus,
+  socketError,
+  onClearAlerts,
+}) => {
   const [whiteList, setWhiteList] = useState<WhiteListEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +32,6 @@ const DeviceTabWhiteList: React.FC<DeviceTabWhiteListProps> = ({ device }) => {
     null
   );
   const [pendingWord, setPendingWord] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [socketAttempt, setSocketAttempt] = useState(0);
-  const [socketStatus, setSocketStatus] = useState<
-    'connecting' | 'open' | 'closed' | 'error'
-  >('connecting');
-  const [socketError, setSocketError] = useState<string | null>(null);
 
   const loadWhiteList = useCallback(
     async (showErrors = true) => {
@@ -70,106 +66,6 @@ const DeviceTabWhiteList: React.FC<DeviceTabWhiteListProps> = ({ device }) => {
     setError(null);
     loadWhiteList();
   }, [device.mac, loadWhiteList]);
-
-  useEffect(() => {
-    let isActive = true;
-    let socket: WebSocket | null = null;
-    let reconnectTimer: number | null = null;
-    let reconnectScheduled = false;
-
-    const scheduleReconnect = () => {
-      if (reconnectScheduled) {
-        return;
-      }
-      reconnectScheduled = true;
-      reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = null;
-        if (isActive) {
-          setSocketAttempt((previous) => previous + 1);
-        }
-      }, 5000);
-    };
-
-    const handleAlertMessage = (payload: unknown) => {
-      if (!isActive) {
-        return;
-      }
-
-      let messageText = '';
-      if (typeof payload === 'string') {
-        try {
-          const parsed = JSON.parse(payload) as {
-            Alert?: string;
-            alert?: string;
-          };
-          messageText = parsed?.Alert ?? parsed?.alert ?? payload;
-        } catch {
-          messageText = payload;
-        }
-      } else {
-        messageText = 'White list alert received.';
-      }
-
-      const receivedAt = new Date().toLocaleString();
-      const alertItem: AlertItem = {
-        id: `alert-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        message: messageText,
-        receivedAt,
-      };
-
-      setAlerts((previous) => {
-        const next = [alertItem, ...previous];
-        return next.slice(0, MAX_ALERTS);
-      });
-    };
-
-    setSocketStatus('connecting');
-    setSocketError(null);
-
-    try {
-      socket = new WebSocket(getWhiteListSocketUrl());
-
-      socket.onopen = () => {
-        if (!isActive) {
-          return;
-        }
-        setSocketStatus('open');
-      };
-
-      socket.onmessage = (event) => {
-        handleAlertMessage(event.data);
-      };
-
-      socket.onerror = () => {
-        if (!isActive) {
-          return;
-        }
-        setSocketStatus('error');
-        setSocketError('WebSocket error while listening for alerts.');
-        scheduleReconnect();
-      };
-
-      socket.onclose = () => {
-        if (!isActive) {
-          return;
-        }
-        setSocketStatus('closed');
-        scheduleReconnect();
-      };
-    } catch {
-      setSocketStatus('error');
-      setSocketError('Unable to open white list alert socket.');
-      scheduleReconnect();
-    }
-
-    return () => {
-      isActive = false;
-      if (reconnectTimer !== null) {
-        window.clearTimeout(reconnectTimer);
-      }
-      socket?.close();
-    };
-  }, [socketAttempt]);
 
   const sortedWords = useMemo(() => {
     return [...whiteList].sort((a, b) =>
@@ -274,12 +170,11 @@ const DeviceTabWhiteList: React.FC<DeviceTabWhiteListProps> = ({ device }) => {
   };
 
   const handleClearAlerts = () => {
-    setAlerts([]);
+    onClearAlerts();
   };
 
   const handleRefresh = () => {
     loadWhiteList();
-    setSocketAttempt((previous) => previous + 1);
   };
 
   return (

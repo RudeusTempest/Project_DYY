@@ -5,6 +5,7 @@ import {
   DeviceRecord,
   ProtocolMethod,
 } from '../../api/devices';
+import { normalizeMac } from '../../utils/deviceUtils';
 
 export type DeviceViewMode = 'gallery' | 'list';
 
@@ -16,6 +17,7 @@ interface DeviceListProps {
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
   viewMode: DeviceViewMode;
+  unreadAlertsByMac?: Record<string, number>;
 }
 
 // The device list simply handles layout and mapping over DeviceCard components.
@@ -27,6 +29,7 @@ const DeviceList: React.FC<DeviceListProps> = ({
   onSelectDevice,
   onRefreshDevice,
   viewMode,
+  unreadAlertsByMac,
 }) => {
   const renderContent = () => {
     if (devices.length === 0) {
@@ -50,6 +53,9 @@ const DeviceList: React.FC<DeviceListProps> = ({
             status={device.status}
             onSelect={onSelectDevice}
             onRefresh={onRefreshDevice}
+            unreadAlerts={
+              unreadAlertsByMac?.[normalizeMac(device.mac)] ?? 0
+            }
           />
         ))}
       </div>

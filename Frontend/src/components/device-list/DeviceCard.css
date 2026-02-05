@@ -21,6 +21,12 @@
   align-items: flex-start;
 }
 
+.device-card__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .device-card__name {
   margin: 0;
   color: var(--text-color);
@@ -42,6 +48,20 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: #fff;
+}
+
+.device-card__alert-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background-color: var(--status-unauthorized);
+  color: #fff;
+  flex: 0 0 auto;
 }
 
 .device-card__status--active {

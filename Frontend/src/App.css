@@ -2,6 +2,7 @@
   min-height: 100vh;
   background-color: var(--background-color);
   color: var(--text-color);
+  --alerts-sidebar-width: 320px;
 }
 
 .main-content {
@@ -26,6 +27,10 @@
   min-height: 0;
 }
 
+.content-body--devices {
+  padding-right: calc(1.5rem + var(--alerts-sidebar-width));
+}
+
 .loading-state,
 .error-state {
   margin-bottom: 1rem;
@@ -40,4 +45,10 @@
 .error-state {
   background-color: rgba(255, 99, 71, 0.15);
   color: var(--status-inactive);
+}
+
+@media (max-width: 1100px) {
+  .content-body--devices {
+    padding-right: 1.5rem;
+  }
 }

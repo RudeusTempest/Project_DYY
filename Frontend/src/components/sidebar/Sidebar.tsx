@@ -1,12 +1,13 @@
 import React from 'react';
 import './Sidebar.css';
-import { type DeviceStatus } from '../../api/devices';
+import { type DeviceStatusFilter } from '../../hooks/useDeviceFilters';
 
 interface SidebarCounts {
   total: number;
   active: number;
   inactive: number;
   unauthorized: number;
+  unread: number;
 }
 
 export interface SidebarGroup {
@@ -16,8 +17,8 @@ export interface SidebarGroup {
 
 interface SidebarProps {
   counts: SidebarCounts;
-  selectedStatus: DeviceStatus | 'all';
-  onSelectStatus: (status: DeviceStatus | 'all') => void;
+  selectedStatus: DeviceStatusFilter;
+  onSelectStatus: (status: DeviceStatusFilter) => void;
   groups: SidebarGroup[];
   selectedGroup: string;
   onSelectGroup: (groupName: string) => void;
@@ -39,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const renderItem = (
     label: string,
     value: number,
-    status: DeviceStatus | 'all'
+    status: DeviceStatusFilter
   ) => {
     const variantClass =
       status === 'all' ? 'sidebar__item--total' : `sidebar__item--${status}`;
@@ -86,6 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <h2 className="sidebar__title">Devices</h2>
       <ul className="sidebar__list">
         {renderItem('Total Devices', counts.total, 'all')}
+        {renderItem('Unread Alerts', counts.unread, 'unread')}
         {renderItem('Active Devices', counts.active, 'active')}
         {renderItem('Inactive Devices', counts.inactive, 'inactive')}
         {renderItem('Unauthorized Devices', counts.unauthorized, 'unauthorized')}

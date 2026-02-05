@@ -12,7 +12,13 @@ import { useDeviceData } from './hooks/useDeviceData';
 import { useGroups } from './hooks/useGroups';
 import { useProtocols } from './hooks/useProtocols';
 import { useDeviceFilters } from './hooks/useDeviceFilters';
-import { getAvailableDeviceTypes } from './utils/deviceUtils';
+import { useAlerts, type AlertItem } from './hooks/useAlerts';
+import {
+  getAvailableDeviceTypes,
+  normalizeIp,
+  normalizeMac,
+  resolveDeviceIp,
+} from './utils/deviceUtils';
 
 const deviceStepLabels: Record<DeviceDetailsStepId, string> = {
   details: 'Details',
@@ -27,6 +33,7 @@ const AppContent: React.FC = () => {
   const [mainView, setMainView] = useState<MainViewState>({ type: 'devices' });
   const [viewMode, setViewMode] = useState<DeviceViewMode>('gallery');
   const { theme } = useTheme();
+  const isDevicesView = mainView.type === 'devices';
 
   const {
     devices,
@@ -54,6 +61,17 @@ const AppContent: React.FC = () => {
     isStartingAutoUpdate,
     handleStartAutoUpdate,
   } = useProtocols();
+
+  const {
+    alerts,
+    alertsByDevice,
+    unreadByDevice,
+    socketStatus,
+    socketError,
+    clearAlerts,
+    clearAlertsForDevice,
+    markDeviceAlertsRead,
+  } = useAlerts(devices);
 
   const availableDeviceTypes = useMemo(
     () => getAvailableDeviceTypes(devices),
@@ -89,6 +107,7 @@ const AppContent: React.FC = () => {
     deviceGroupsByMac,
     availableGroupNames,
     availableDeviceTypes,
+    unreadAlertsByMac: unreadByDevice,
   });
 
   const selectedDeviceProtocol = useMemo(() => {
@@ -97,6 +116,74 @@ const AppContent: React.FC = () => {
     }
     return getProtocolForDevice(mainView.device);
   }, [getProtocolForDevice, mainView, protocol]);
+
+  const deviceLookup = useMemo(() => {
+    const byMac = new Map<string, DeviceRecord>();
+    const byIp = new Map<string, DeviceRecord>();
+
+    devices.forEach((device) => {
+      const normalizedMac = normalizeMac(device.mac);
+      if (normalizedMac) {
+        byMac.set(normalizedMac, device);
+      }
+
+      const primaryIp = resolveDeviceIp(device);
+      if (primaryIp) {
+        const normalizedIp = normalizeIp(primaryIp);
+        if (normalizedIp) {
+          byIp.set(normalizedIp, device);
+        }
+      }
+
+      device.interfaces.forEach((iface) => {
+        const normalizedIp = normalizeIp(iface.ip_address);
+        if (normalizedIp && normalizedIp !== 'unassigned' && normalizedIp !== 'unknown') {
+          byIp.set(normalizedIp, device);
+        }
+      });
+    });
+
+    return { byMac, byIp };
+  }, [devices]);
+
+  const findDeviceForAlert = useCallback(
+    (alert: AlertItem) => {
+      const normalizedMac = alert.deviceMac
+        ? normalizeMac(alert.deviceMac)
+        : '';
+      if (normalizedMac) {
+        const deviceByMac = deviceLookup.byMac.get(normalizedMac);
+        if (deviceByMac) {
+          return deviceByMac;
+        }
+      }
+
+      const normalizedIp = alert.deviceIp ? normalizeIp(alert.deviceIp) : '';
+      if (normalizedIp) {
+        return deviceLookup.byIp.get(normalizedIp);
+      }
+
+      return undefined;
+    },
+    [deviceLookup]
+  );
+
+  const handleAlertSelect = useCallback(
+    (alert: AlertItem) => {
+      const device = findDeviceForAlert(alert);
+      if (!device) {
+        return;
+      }
+      markDeviceAlertsRead(device.mac);
+      setMainView({
+        type: 'device',
+        device,
+        section: 'white-list',
+        sectionLabel: deviceStepLabels['white-list'],
+      });
+    },
+    [findDeviceForAlert, markDeviceAlertsRead]
+  );
 
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([refreshAllDevices(), refreshGroups()]);
@@ -125,8 +212,12 @@ const AppContent: React.FC = () => {
           ? { ...current, section: stepId, sectionLabel: label }
           : current
       );
+
+      if (stepId === 'white-list' && mainView.type === 'device') {
+        markDeviceAlertsRead(mainView.device.mac);
+      }
     },
-    []
+    [mainView, markDeviceAlertsRead]
   );
 
   const breadcrumbs = useMemo(() => {
@@ -207,17 +298,33 @@ const AppContent: React.FC = () => {
       />
 
       <main className="main-content">
-        <SubHeader items={breadcrumbs} />
-        <div className="content-body">
+        <SubHeader
+          items={breadcrumbs}
+          className={isDevicesView ? 'sub-header--with-rightbar' : undefined}
+        />
+        <div
+          className={`content-body${
+            isDevicesView ? ' content-body--devices' : ''
+          }`}
+        >
           {statusMessages}
           <MainView
             view={mainView}
             isLoading={isLoading}
+            devices={devices}
             filteredDevices={filteredDevices}
             viewMode={viewMode}
             getProtocolForDevice={getProtocolForDevice}
             onSelectDevice={handleSelectDevice}
             onRefreshDevice={handleDeviceRefresh}
+            unreadAlertsByMac={unreadByDevice}
+            alerts={alerts}
+            alertsByDevice={alertsByDevice}
+            socketStatus={socketStatus}
+            socketError={socketError}
+            onSelectAlert={handleAlertSelect}
+            onClearAlerts={clearAlerts}
+            onClearAlertsForDevice={clearAlertsForDevice}
             selectedDeviceProtocol={selectedDeviceProtocol}
             onDeviceStepChange={handleDeviceStepChange}
             onDeviceProtocolChange={handleDeviceProtocolChange}

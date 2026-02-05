@@ -83,6 +83,11 @@
   color: var(--status-unauthorized);
 }
 
+.sidebar__item--unread {
+  border-color: var(--status-unauthorized);
+  color: var(--status-unauthorized);
+}
+
 .sidebar__section-header {
   display: flex;
   align-items: center;

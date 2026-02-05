@@ -8,10 +8,11 @@ export interface SubHeaderItem {
 
 interface SubHeaderProps {
   items: SubHeaderItem[];
+  className?: string;
 }
 
-const SubHeader: React.FC<SubHeaderProps> = ({ items }) => (
-  <div className="sub-header">
+const SubHeader: React.FC<SubHeaderProps> = ({ items, className }) => (
+  <div className={`sub-header${className ? ` ${className}` : ''}`}>
     <nav className="sub-header__breadcrumbs" aria-label="Breadcrumb">
       {items.map((item, index) => (
         <React.Fragment key={`${item.label}-${index}`}>

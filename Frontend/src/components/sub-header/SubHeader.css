@@ -9,6 +9,10 @@
   flex-shrink: 0;
 }
 
+.sub-header--with-rightbar {
+  margin-right: var(--alerts-sidebar-width);
+}
+
 .sub-header__breadcrumbs {
   display: flex;
   align-items: center;
@@ -34,4 +38,10 @@
 .sub-header__separator {
   color: var(--muted-text);
   font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .sub-header--with-rightbar {
+    margin-right: 0;
+  }
 }

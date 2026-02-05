@@ -300,7 +300,10 @@ class DeviceService:
 
                         if added or deleted:
                             await broadcast_alert({
-                                "Alert": f"{dict['words']} changed!"
+                                "Alert": f"{dict['words']} changed!",
+                                "device_ip": cred.get("ip"),
+                                "device_mac": cred.get("mac_address"),
+                                "device_type": cred.get("device_type"),
                             })
                             print("---------------------Alerted frontend---------------------")
 

@@ -9,6 +9,7 @@ interface DeviceCardProps {
   protocol: ProtocolMethod;
   onSelect: (device: DeviceRecord) => void;
   onRefresh: (ip: string) => Promise<void> | void;
+  unreadAlerts?: number;
 }
 
 // Shows the main snapshot for a single device. Clicking anywhere (except the
@@ -19,6 +20,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
   protocol,
   onSelect,
   onRefresh,
+  unreadAlerts = 0,
 }) => {
   // Prefer the IP reported by the device, otherwise look at the credential.
   const deviceIp = resolveDeviceIp(device);
@@ -42,6 +44,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
     'Unauthorized';
 
   const statusClass = `device-card__status--${status}`;
+  const hasUnreadAlerts = unreadAlerts > 0;
 
   return (
     <div className="device-card" onClick={() => onSelect(device)}>
@@ -57,9 +60,20 @@ const DeviceCard: React.FC<DeviceCardProps> = ({
             )}
           </p>
         </div>
-        <span className={`device-card__status ${statusClass}`}>
-          {statusLabel}
-        </span>
+        <div className="device-card__header-actions">
+          {hasUnreadAlerts && (
+            <span
+              className="device-card__alert-badge"
+              aria-label="Unread alerts"
+              title="Unread alerts"
+            >
+              !
+            </span>
+          )}
+          <span className={`device-card__status ${statusClass}`}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
 
       <div className="device-card__details">

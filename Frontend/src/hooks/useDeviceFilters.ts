@@ -7,18 +7,22 @@ interface UseDeviceFiltersParams {
   deviceGroupsByMac: Record<string, string[]>;
   availableGroupNames: string[];
   availableDeviceTypes: string[];
+  unreadAlertsByMac?: Record<string, number>;
 }
+
+export type DeviceStatusFilter = DeviceStatus | 'all' | 'unread';
 
 export const useDeviceFilters = ({
   devices,
   deviceGroupsByMac,
   availableGroupNames,
   availableDeviceTypes,
+  unreadAlertsByMac,
 }: UseDeviceFiltersParams) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [selectedDeviceType, setSelectedDeviceType] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<DeviceStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<DeviceStatusFilter>('all');
 
   useEffect(() => {
     if (
@@ -39,7 +43,14 @@ export const useDeviceFilters = ({
     const term = searchTerm.toLowerCase().trim();
 
     return devices.filter((device) => {
-      if (statusFilter !== 'all' && device.status !== statusFilter) {
+      const hasUnreadAlerts =
+        (unreadAlertsByMac?.[normalizeMac(device.mac)] ?? 0) > 0;
+
+      if (statusFilter === 'unread') {
+        if (!hasUnreadAlerts) {
+          return false;
+        }
+      } else if (statusFilter !== 'all' && device.status !== statusFilter) {
         return false;
       }
 
@@ -75,6 +86,7 @@ export const useDeviceFilters = ({
     selectedDeviceType,
     selectedGroup,
     statusFilter,
+    unreadAlertsByMac,
   ]);
 
   const sidebarCounts = useMemo(() => {
@@ -83,6 +95,7 @@ export const useDeviceFilters = ({
       active: 0,
       inactive: 0,
       unauthorized: 0,
+      unread: 0,
     };
 
     devices.forEach((device) => {
@@ -94,13 +107,17 @@ export const useDeviceFilters = ({
       } else {
         counts.unauthorized += 1;
       }
+
+      if ((unreadAlertsByMac?.[normalizeMac(device.mac)] ?? 0) > 0) {
+        counts.unread += 1;
+      }
     });
 
     return counts;
-  }, [devices]);
+  }, [devices, unreadAlertsByMac]);
 
   const handleStatusFilterChange = useCallback(
-    (status: DeviceStatus | 'all') => {
+    (status: DeviceStatusFilter) => {
       setStatusFilter((current) => (current === status ? 'all' : status));
     },
     []

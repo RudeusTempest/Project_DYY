@@ -1,5 +1,6 @@
 import React from 'react';
 import DeviceList, { type DeviceViewMode } from '../device-list/DeviceList';
+import DeviceAlertsPanel from '../device-list/DeviceAlertsPanel';
 import DeviceDetailsView, {
   type DeviceDetailsStepId,
 } from '../device-list/DeviceDetailsView';
@@ -8,6 +9,7 @@ import AddDeviceView from '../header/AddDeviceView';
 import GroupSettingsView from '../sidebar/GroupSettingsView';
 import { type DeviceRecord, type ProtocolMethod } from '../../api/devices';
 import type { GroupWithMembers } from '../../api/groups';
+import { type AlertItem, type AlertSocketStatus } from '../../hooks/useAlerts';
 
 export type MainViewState =
   | { type: 'devices' }
@@ -24,11 +26,20 @@ export type MainViewState =
 interface MainViewProps {
   view: MainViewState;
   isLoading: boolean;
+  devices: DeviceRecord[];
   filteredDevices: DeviceRecord[];
   viewMode: DeviceViewMode;
   getProtocolForDevice: (device: DeviceRecord) => ProtocolMethod;
   onSelectDevice: (device: DeviceRecord) => void;
   onRefreshDevice: (ip: string) => Promise<void> | void;
+  unreadAlertsByMac: Record<string, number>;
+  alerts: AlertItem[];
+  alertsByDevice: Record<string, AlertItem[]>;
+  socketStatus: AlertSocketStatus;
+  socketError: string | null;
+  onSelectAlert: (alert: AlertItem) => void;
+  onClearAlerts: () => void;
+  onClearAlertsForDevice: (deviceMac: string) => void;
   selectedDeviceProtocol: ProtocolMethod;
   onDeviceStepChange: (stepId: DeviceDetailsStepId, label: string) => void;
   onDeviceProtocolChange: (device: DeviceRecord, method: ProtocolMethod) => void;
@@ -57,11 +68,20 @@ interface MainViewProps {
 const MainView: React.FC<MainViewProps> = ({
   view,
   isLoading,
+  devices,
   filteredDevices,
   viewMode,
   getProtocolForDevice,
   onSelectDevice,
   onRefreshDevice,
+  unreadAlertsByMac,
+  alerts,
+  alertsByDevice,
+  socketStatus,
+  socketError,
+  onSelectAlert,
+  onClearAlerts,
+  onClearAlertsForDevice,
   selectedDeviceProtocol,
   onDeviceStepChange,
   onDeviceProtocolChange,
@@ -93,13 +113,24 @@ const MainView: React.FC<MainViewProps> = ({
       }
 
       return (
-        <DeviceList
-          devices={filteredDevices}
-          getProtocolForDevice={getProtocolForDevice}
-          onSelectDevice={onSelectDevice}
-          onRefreshDevice={onRefreshDevice}
-          viewMode={viewMode}
-        />
+        <>
+          <DeviceList
+            devices={filteredDevices}
+            getProtocolForDevice={getProtocolForDevice}
+            onSelectDevice={onSelectDevice}
+            onRefreshDevice={onRefreshDevice}
+            viewMode={viewMode}
+            unreadAlertsByMac={unreadAlertsByMac}
+          />
+          <DeviceAlertsPanel
+            alerts={alerts}
+            devices={devices}
+            socketStatus={socketStatus}
+            socketError={socketError}
+            onSelectAlert={onSelectAlert}
+            onClearAlerts={onClearAlerts}
+          />
+        </>
       );
     case 'device':
       return (
@@ -112,6 +143,10 @@ const MainView: React.FC<MainViewProps> = ({
             onDeviceProtocolChange(view.device, method)
           }
           onClose={onCloseView}
+          alertsByDevice={alertsByDevice}
+          socketStatus={socketStatus}
+          socketError={socketError}
+          onClearAlertsForDevice={onClearAlertsForDevice}
         />
       );
     case 'settings':

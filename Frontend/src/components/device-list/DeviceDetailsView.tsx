@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import '../ViewPanel.css';
 import './DeviceDetailsView.css';
 import { type DeviceRecord, type ProtocolMethod } from '../../api/devices';
-import { resolveDeviceIp } from '../../utils/deviceUtils';
+import { resolveDeviceIp, normalizeMac } from '../../utils/deviceUtils';
 import {
   deviceDetailsTabs,
   type DeviceDetailsStepId,
 } from './deviceDetailsTabs';
+import { type AlertItem, type AlertSocketStatus } from '../../hooks/useAlerts';
 
 export type { DeviceDetailsStepId } from './deviceDetailsTabs';
 
@@ -17,6 +18,10 @@ interface DeviceDetailsViewProps {
   onClose: () => void;
   initialStep?: DeviceDetailsStepId;
   onStepChange?: (step: DeviceDetailsStepId, label: string) => void;
+  alertsByDevice: Record<string, AlertItem[]>;
+  socketStatus: AlertSocketStatus;
+  socketError: string | null;
+  onClearAlertsForDevice: (deviceMac: string) => void;
 }
 
 // Detailed look at a single device with paginated sections to avoid long
@@ -28,6 +33,10 @@ const DeviceDetailsView: React.FC<DeviceDetailsViewProps> = ({
   onClose,
   initialStep = 'details',
   onStepChange,
+  alertsByDevice,
+  socketStatus,
+  socketError,
+  onClearAlertsForDevice,
 }) => {
   const [activeStep, setActiveStep] = useState<DeviceDetailsStepId>(
     initialStep ?? 'details'
@@ -59,6 +68,9 @@ const DeviceDetailsView: React.FC<DeviceDetailsViewProps> = ({
   const deviceIp = resolveDeviceIp(device);
   const deviceIpLabel = deviceIp || 'Not available';
   const hasDeviceIp = Boolean(deviceIp);
+  const normalizedMac = normalizeMac(device.mac);
+  const deviceAlerts = normalizedMac ? alertsByDevice[normalizedMac] ?? [] : [];
+  const handleClearAlerts = () => onClearAlertsForDevice(device.mac);
   const currentStepIndex = deviceDetailsTabs.findIndex(
     (step) => step.id === activeStep
   );
@@ -94,6 +106,10 @@ const DeviceDetailsView: React.FC<DeviceDetailsViewProps> = ({
       onProtocolChange,
       deviceIpLabel,
       hasDeviceIp,
+      alerts: deviceAlerts,
+      socketStatus,
+      socketError,
+      onClearAlerts: handleClearAlerts,
     });
   };
 

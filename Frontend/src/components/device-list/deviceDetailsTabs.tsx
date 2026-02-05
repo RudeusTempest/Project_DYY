@@ -1,5 +1,6 @@
 import React from 'react';
 import { type DeviceRecord, type ProtocolMethod } from '../../api/devices';
+import { type AlertItem, type AlertSocketStatus } from '../../hooks/useAlerts';
 import DeviceTabDetails from './tabs/deviceTabDetails';
 import DeviceTabConfigDiffs from './tabs/deviceTabConfigDiffs';
 import DeviceTabInterfaces from './tabs/deviceTabInterfaces';
@@ -13,6 +14,10 @@ export interface DeviceDetailsTabContext {
   onProtocolChange: (method: ProtocolMethod) => void;
   deviceIpLabel: string;
   hasDeviceIp: boolean;
+  alerts: AlertItem[];
+  socketStatus: AlertSocketStatus;
+  socketError: string | null;
+  onClearAlerts: () => void;
 }
 
 export const deviceDetailsTabs = [
@@ -65,7 +70,13 @@ export const deviceDetailsTabs = [
     id: 'white-list',
     label: 'White list',
     render: (context: DeviceDetailsTabContext) => (
-      <DeviceTabWhiteList device={context.device} />
+      <DeviceTabWhiteList
+        device={context.device}
+        alerts={context.alerts}
+        socketStatus={context.socketStatus}
+        socketError={context.socketError}
+        onClearAlerts={context.onClearAlerts}
+      />
     ),
   },
 ] as const;
