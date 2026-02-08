@@ -297,8 +297,8 @@ class DeviceService:
                     pass
             
             if config_output:
-                normalized_new_config = DeviceService.normalize_config(config_output)
-                normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                normalized_new_config = await DeviceService.normalize_config(config_output)
+                normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
 
                 # Only save if the configuration changed
                 if normalized_new_config != normalized_old_config:
@@ -489,8 +489,8 @@ class DeviceService:
                 # Save configuration to database
                 if config_output:
                     try:
-                        normalized_new_config = DeviceService.normalize_config(config_output)
-                        normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                        normalized_new_config = await DeviceService.normalize_config(config_output)
+                        normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
 
                         # Only save if the configuration changed
                         if normalized_new_config != normalized_old_config:
@@ -536,8 +536,8 @@ class DeviceService:
                 # Save configuration to database
                 if config_output:
                     try:
-                        normalized_new_config = DeviceService.normalize_config(config_output)
-                        normalized_old_config = DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                        normalized_new_config = await DeviceService.normalize_config(config_output)
+                        normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
 
                         # Only save if the configuration changed
                         if normalized_new_config != normalized_old_config:
