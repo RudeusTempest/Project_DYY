@@ -298,7 +298,7 @@ class DeviceService:
             
             if config_output:
                 normalized_new_config = await DeviceService.normalize_config(config_output)
-                normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
 
                 # Only save if the configuration changed
                 if normalized_new_config != normalized_old_config:
@@ -320,30 +320,28 @@ class DeviceService:
                 for cred in creds:
                     await DeviceService.capture_and_save_config(cred)
                     differences = await DeviceService.get_config_differences(cred.get("ip"))
-                    white_list = await WhiteListService.get_white_list() 
+                    if differences:
+                        white_list = await WhiteListService.get_white_list() 
 
-                    for dict in white_list:
-                        header = re.escape(dict["words"])
-                        pattern = re.compile(rf"^\s*{header}\b", re.MULTILINE)
-                        added_lines = differences["added_lines"]
-                        deleted_lines = differences["deleted_lines"]
-                        
-                        for line in added_lines:
-                            added = pattern.search(line or "")
+                        for dict in white_list:
+                            header = re.escape(dict["words"])
+                            pattern = re.compile(rf"^\s*{header}\b", re.MULTILINE)
+                            added_lines = differences["added_lines"]
+                            deleted_lines = differences["deleted_lines"]
+                            
+                            for line in added_lines:
+                                added = pattern.search(line or "")
 
-                        for line in deleted_lines:
-                            deleted = pattern.search(line or "")
+                            for line in deleted_lines:
+                                deleted = pattern.search(line or "")
 
-                        if added or deleted:
-                            await broadcast_alert({
-                                "Alert": f"{dict['words']} changed!",
-                                "device_ip": cred.get("ip"),
-                                "device_mac": cred.get("mac_address"),
-                                "device_type": cred.get("device_type"),
-                            })
-                            print("---------------------Alerted frontend---------------------")
+                            if added or deleted:
+                                await broadcast_alert({
+                                    "Alert": f"{dict['words']} changed!"
+                                })
+                                print("---------------------Alerted frontend---------------------")
 
-                await asyncio.sleep(settings.conf_interval)
+                    await asyncio.sleep(settings.conf_interval)
 
             except Exception as e:        
                 print(f"error in poll_config_loop: {e}")
@@ -490,7 +488,7 @@ class DeviceService:
                 if config_output:
                     try:
                         normalized_new_config = await DeviceService.normalize_config(config_output)
-                        normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                        normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
 
                         # Only save if the configuration changed
                         if normalized_new_config != normalized_old_config:
@@ -537,7 +535,7 @@ class DeviceService:
                 if config_output:
                     try:
                         normalized_new_config = await DeviceService.normalize_config(config_output)
-                        normalized_old_config = await DeviceService.normalize_config(DeviceService.get_current_config(ip))
+                        normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
 
                         # Only save if the configuration changed
                         if normalized_new_config != normalized_old_config:
