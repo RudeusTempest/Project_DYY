@@ -51,9 +51,8 @@ const DeviceDetailsView: React.FC<DeviceDetailsViewProps> = ({
     }
 
     const nextStep = initialStep ?? 'details';
-    setActiveStep(nextStep);
-    onStepChange?.(nextStep, getStepLabel(nextStep));
-  }, [device, initialStep, onStepChange]);
+    setActiveStep((prev) => (prev === nextStep ? prev : nextStep));
+  }, [device, initialStep]);
 
   const setStep = (step: DeviceDetailsStepId) => {
     setActiveStep(step);
