@@ -22,7 +22,7 @@ class DevicesRepo:
                 res = await session.execute(q)
                 existing = res.scalar_one_or_none()
                 if existing:
-                    # Update top-level fields only (do NOT store interfaces in Postgres)
+                    # Update top-level fields only (does NOT store interfaces in Postgres)
                     existing.hostname = hostname
                     existing.last_updated = last_updated
                     existing.raw_date = raw_date

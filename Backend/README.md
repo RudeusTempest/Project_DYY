@@ -92,8 +92,6 @@ Project_DYY/
 
 ## Setup Instructions
 
-## Setup Instructions
-
 ### Backend Setup
 
 1. Navigate to the Backend directory:
