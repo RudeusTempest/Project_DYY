@@ -6,6 +6,7 @@ from src.services.extraction import ExtractionService
 from src.services.credentials import CredentialsService
 from src.services.white_list import WhiteListService
 from src.config.settings import settings
+from src.models.api.credentials import device_cred
 from typing import Optional, Dict, List, Any
 import asyncio
 from src.utils.web_socket import broadcast_alert
@@ -18,14 +19,16 @@ class DeviceService:
     @staticmethod
     async def update_device_info_snmp(cred: dict) -> Dict[str, Any]:
         try:
+            stored_mac = CredentialsService.normalize_mac_address(cred.get("mac_address"))
             snmp_password = cred.pop("snmp_password", None)
-            mac_address = cred.pop("mac_address", None)
+            cred.pop("mac_address", None)
             device_type = cred.get("device_type")  # Extract device type from credentials
             ip = cred.get("ip")
 
             if not snmp_password:
                 print(f"No SNMP password provided for device {ip}")
-                await DevicesRepo.flag_device_inactive(mac_address)
+                if stored_mac:
+                    await DevicesRepo.flag_device_inactive(stored_mac)
                 return {"success": False, "reason": f"No SNMP password provided for device {ip}"}
 
             print(f"Updating device via SNMP: {ip}")
@@ -40,15 +43,37 @@ class DeviceService:
             interface_indexes = await ConnectionService.get_interfaces_indexes(ip, snmp_password)
             if interface_indexes is None or len(interface_indexes) == 0:
                 print(f"Failed to get valid interface indexes for {ip}")
-                await DevicesRepo.flag_device_inactive(mac_address)
+                if stored_mac:
+                    await DevicesRepo.flag_device_inactive(stored_mac)
                 return {"success": False, "reason": f"Failed to get valid interface indexes for {ip}"}
 
             print(f"Found {len(interface_indexes)} valid interfaces")
 
-            # Use MAC address from credentials (ensures consistency with CLI method)
-            # This is the device's unique identifier in the database
-            mac_addr = mac_address if mac_address else "Not found"
-            print(f"MAC Address: {mac_addr} (from credentials)")
+            discovered_mac = await CredentialsService.discover_mac_address(
+                device_cred(
+                    device_type=device_type,
+                    ip=ip,
+                    username=cred.get("username", ""),
+                    password=cred.get("password", ""),
+                    secret=cred.get("secret"),
+                    snmp_password=snmp_password,
+                ),
+                "snmp",
+            )
+
+            if not discovered_mac:
+                return {
+                    "success": False, "reason": f"Could not determine MAC address for device {ip}"}
+
+            if stored_mac and stored_mac != discovered_mac:
+                return {
+                    "success": False,
+                    "reason": f"MAC address mismatch for device {ip}: stored {stored_mac}, discovered {discovered_mac}",
+                }
+
+            mac_addr = stored_mac or discovered_mac
+            cred["mac_address"] = mac_addr
+            print(f"MAC Address: {mac_addr} (verified)")
 
             # Fetch interface index to IP mapping
             index_to_ip_mapping = await ConnectionService.get_interface_index_to_ip_mapping(ip, snmp_password)
@@ -115,8 +140,8 @@ class DeviceService:
 
         except Exception as e:
             print(f"Error updating device {ip or 'unknown'} via SNMP: {e}")
-            if mac_address:
-                await DevicesRepo.flag_device_inactive(mac_address)
+            if stored_mac:
+                await DevicesRepo.flag_device_inactive(stored_mac)
             return {"success": False, "reason": f"Error updating device via SNMP: {str(e)}"}
 
 
@@ -441,17 +466,30 @@ class DeviceService:
     @staticmethod
     async def update_device_info_cli(cred: dict) -> Optional[bool]:
         try:
+            
             cred.pop("snmp_password", None)
-            mac_address = cred.pop("mac_address", None)
+            stored_mac = CredentialsService.normalize_mac_address(cred.pop("mac_address", None))  # Extract device mac from credentials
             device_type = cred.get("device_type")  # Extract device type from credentials
             ip = cred.get("ip")
             
             connection = ConnectionService.connect(cred)
             
             if not connection:
-                    await DevicesRepo.flag_device_inactive(mac_address)
+                    if stored_mac:
+                        await DevicesRepo.flag_device_inactive(stored_mac)
                     return {"success": False, "reason": f"Failed to connect to device {ip}"}
+
             if "cisco" in cred["device_type"]:
+                discovered_mac = CredentialsService.discover_mac_cli(connection, cred["device_type"])
+                if not discovered_mac:
+                    return {"success": False, "reason": f"Could not determine MAC address for device {ip}"}
+
+                if stored_mac and stored_mac != discovered_mac:
+                    return {
+                        "success": False,
+                        "reason": f"MAC address mismatch for device {ip}: stored {stored_mac}, discovered {discovered_mac}",
+                    }
+
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
                 
                 if outputs is None:
@@ -460,7 +498,7 @@ class DeviceService:
                     return {"success": False, "reason": f"Failed to get CLI outputs from device {ip}"}
                     
                 hostname_output, ip_output, mac_output, info_neighbors_output, all_interfaces_output, last_updated, raw_date = outputs
-                
+
                 # Capture configuration before disconnecting
                 config_output = ConnectionService.get_cisco_config(connection, cred["device_type"])
                 
@@ -481,6 +519,12 @@ class DeviceService:
                     
                 extracted_mac, hostname, interface_data, info_neighbors = extraction_result
                 
+                if CredentialsService.normalize_mac_address(extracted_mac) != discovered_mac:
+                    return {
+                        "success": False,
+                        "reason": f"CLI MAC extraction mismatch for device {ip}: extracted {extracted_mac}, discovered {discovered_mac}",
+                    }
+
                 # Save to database with device_type
                 await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
                 
@@ -500,6 +544,16 @@ class DeviceService:
                 
 
             elif "juniper" in cred["device_type"]:
+                discovered_mac = CredentialsService.discover_mac_cli(connection, cred["device_type"])
+                if not discovered_mac:
+                    return {"success": False, "reason": f"Could not determine MAC address for device {ip}"}
+
+                if stored_mac and stored_mac != discovered_mac:
+                    return {
+                        "success": False,
+                        "reason": f"MAC address mismatch for device {ip}: stored {stored_mac}, discovered {discovered_mac}",
+                    }
+
                 outputs = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
 
                 if outputs is None:
@@ -508,7 +562,7 @@ class DeviceService:
                     return {"success": False, "reason": f"Failed to get outputs from device {ip}"}
                     
                 hostname_output, ip_output, mac_output, all_interfaces_output, last_updated, raw_date = outputs
-                
+
                 # Capture configuration before disconnecting
                 config_output = ConnectionService.get_juniper_config(connection, cred["device_type"])
                 
@@ -527,6 +581,12 @@ class DeviceService:
                     return {"success": False, "reason": f"Failed to extract CLI data from device {ip}"}
                     
                 extracted_mac, hostname, interface_data = extraction_result
+
+                if CredentialsService.normalize_mac_address(extracted_mac) != discovered_mac:
+                    return {
+                        "success": False,
+                        "reason": f"CLI MAC extraction mismatch for device {ip}: extracted {extracted_mac}, discovered {discovered_mac}",
+                    }
                 
                 # Save to database with device_type
                 await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type)
@@ -555,8 +615,8 @@ class DeviceService:
             
         except Exception as e:
             print(f"Error updating device CLI {ip or 'unknown'}: {e}")
-            if mac_address:
-                await DevicesRepo.flag_device_inactive(mac_address)
+            if stored_mac:
+                await DevicesRepo.flag_device_inactive(stored_mac)
             return {"success": False, "reason": f"Error updating device CLI {ip or 'unknown'}: {e}"}
 
 

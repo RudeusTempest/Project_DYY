@@ -8,12 +8,17 @@ from typing import List, Dict, Any
 router = APIRouter()
 
 
-@router.post("/add_device")    
+@router.post("/add_device")
 async def add_device(cred: device_cred, method: str = "snmp") -> Dict[str, Any]:
     try:
-        device_added = await CredentialsController.add_device_cred(cred)
+        device_added = await CredentialsController.add_device_cred(cred, method)
+        if not device_added.get("success"):
+            raise HTTPException(status_code=400, detail=device_added.get("reason", "Failed to add device"))
+
         refreshed = await DeviceController.refresh_by_ip(cred.ip, method)
         return {"device added": device_added, "refreshed": refreshed}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to add device: {str(e)}")
 

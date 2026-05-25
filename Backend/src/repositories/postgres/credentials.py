@@ -1,24 +1,29 @@
 from src.config.postgres import AsyncSessionLocal
 from src.models.postgres.credentials import Creds
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import Dict, Any, List, Optional
-
 
 
 class CredentialsRepo:
 
     @staticmethod
     async def add_device_cred(cred: Dict[str, Any]) -> Dict[str, Any]:
+        session = None
         try:
-            async with AsyncSessionLocal() as session:
+            mac_address = cred.get("mac_address")
+            if not mac_address:
+                return {"success": False, "reason": "mac_address is required and must be discovered before saving"}
+
+            session = AsyncSessionLocal()
+            async with session as db_session:
                 obj = Creds(**cred)
-                session.add(obj)
-                await session.commit()
-                await session.refresh(obj)
+                db_session.add(obj)
+                await db_session.commit()
+                await db_session.refresh(obj)
                 return {"success": True, "id": obj.id}
         except Exception as e:
-            await session.rollback()
+            if session is not None:
+                await session.rollback()
             return {"success": False, "reason": str(e)}
 
 

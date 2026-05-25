@@ -264,12 +264,29 @@ class ConnectionService:
                     continue
             
             # If all OIDs failed, fall back to getting MAC from the first interface
-            print("Could not fetch system MAC from standard OIDs, using first interface MAC")
+            print("Could not fetch system MAC from standard OIDs")
             return None
         except Exception as e:
             print(f"Error getting system MAC for {ip}: {e}")
             return None
 
+
+    @staticmethod
+    async def discover_mac_snmp(ip: str, snmp_password: str) -> Optional[str]:
+        system_mac = await ConnectionService.get_system_mac(ip, snmp_password)
+        if system_mac:
+            return system_mac
+
+        interface_indexes = await ConnectionService.get_interfaces_indexes(ip, snmp_password)
+        if not interface_indexes:
+            return None
+
+        for interface_name, interface_index in interface_indexes.items():
+            mac = await ConnectionService.get_mac_address(ip, snmp_password, interface_index)
+            if mac and mac not in ("00:00:00:00:00:00", "Not found"):
+                return mac
+
+        return None
 
 
     @staticmethod
