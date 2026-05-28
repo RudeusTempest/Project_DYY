@@ -19,11 +19,12 @@ class DeviceService:
     @staticmethod
     async def update_device_info_snmp(cred: dict) -> Dict[str, Any]:
         try:
-            stored_mac = CredentialsService.normalize_mac_address(cred.get("mac_address"))
+            ip = cred.get("ip")
+            raw_mac = cred.get("mac_address")
+            stored_mac = CredentialsService.validate_mac_address(raw_mac)
             snmp_password = cred.pop("snmp_password", None)
             cred.pop("mac_address", None)
             device_type = cred.get("device_type")  # Extract device type from credentials
-            ip = cred.get("ip")
 
             if not snmp_password:
                 print(f"No SNMP password provided for device {ip}")
@@ -471,9 +472,10 @@ class DeviceService:
         try:
             
             cred.pop("snmp_password", None)
-            stored_mac = CredentialsService.normalize_mac_address(cred.pop("mac_address", None))  # Extract device mac from credentials
-            device_type = cred.get("device_type")  # Extract device type from credentials
             ip = cred.get("ip")
+            raw_mac = cred.pop("mac_address", None)
+            stored_mac = CredentialsService.validate_mac_address(raw_mac)  # Extract device mac from credentials
+            device_type = cred.get("device_type")  # Extract device type from credentials
             
             connection = ConnectionService.connect(cred)
             

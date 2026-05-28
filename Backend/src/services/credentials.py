@@ -26,43 +26,32 @@ class CredentialsService:
         return None
 
     @staticmethod
-    def normalize_mac_address(mac_address: Optional[str]) -> Optional[str]:
-        if not isinstance(mac_address, str):
+    def normalize_mac_address(mac: Optional[str]) -> Optional[str]:
+        if not isinstance(mac, str):
             return None
 
-        cleaned = mac_address.strip()
-        if not cleaned:
+        mac = mac.strip().lower()
+
+        if mac in {"", "not found", "unknown", "none", "n/a"}:
             return None
 
-        lowered = cleaned.lower()
-        if lowered in {"not found", "unknown", "none", "n/a", ""}:
+        mac = mac.replace("-", "").replace(":", "").replace(".", "")
+
+        if len(mac) != 12 or not re.fullmatch(r"[0-9a-f]{12}", mac):
             return None
 
-        if "." in cleaned:
-            parts = cleaned.split(".")
-            if len(parts) != 6:
-                return None
-            if not all(len(part) == 2 for part in parts):
-                return None
-            normalized = ":".join(part.lower() for part in parts)
-        elif ":" in cleaned:
-            parts = cleaned.split(":")
-            if len(parts) != 6:
-                return None
-            if not all(len(part) in {1, 2} for part in parts):
-                return None
-            normalized = ":".join(part.lower().zfill(2) for part in parts)
-        else:
-            if len(cleaned) != 12 or not re.fullmatch(r"[0-9a-fA-F]{12}", cleaned):
-                return None
-            normalized = ":".join(cleaned[i:i + 2].lower() for i in range(0, 12, 2))
-
-        if not all(re.fullmatch(r"[0-9a-f]{2}", part) for part in normalized.split(":")):
-            return None
+        normalized = ":".join(mac[i:i+2] for i in range(0, 12, 2))
 
         if normalized == "00:00:00:00:00:00":
             return None
 
+        return normalized
+
+    @staticmethod
+    def validate_mac_address(mac_address: Optional[str]) -> Optional[str]:
+        normalized = CredentialsService.normalize_mac_address(mac_address)
+        if mac_address and normalized is None:
+            print(f"Invalid MAC address detected: {mac_address}")
         return normalized
 
     @staticmethod
@@ -81,7 +70,7 @@ class CredentialsService:
             mac_match = re.search(r"address is ([\w\.]+)", mac_output)
             if not mac_match:
                 return None
-            return CredentialsService.normalize_mac_address(mac_match.group(1))
+            return CredentialsService.validate_mac_address(mac_match.group(1))
 
         if "juniper" in device_type:
             connection.send_command("cli")
@@ -95,7 +84,7 @@ class CredentialsService:
             mac_match = re.search(r"Hardware address: (\S+)", mac_output)
             if not mac_match:
                 return None
-            return CredentialsService.normalize_mac_address(mac_match.group(1))
+            return CredentialsService.validate_mac_address(mac_match.group(1))
 
         return None
 
@@ -109,7 +98,7 @@ class CredentialsService:
             if not snmp_password:
                 return None
             discovered = await ConnectionService.discover_mac_snmp(ip, snmp_password)
-            return CredentialsService.normalize_mac_address(discovered)
+            return CredentialsService.validate_mac_address(discovered)
 
         if method == "cli":
             connection = ConnectionService.connect(cred_dict)
