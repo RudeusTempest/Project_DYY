@@ -298,13 +298,16 @@ class DeviceService:
             
             if config_output:
                 normalized_new_config = await DeviceService.normalize_config(config_output)
-                normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
+                current_config = await DeviceService.get_current_config(ip)
 
-                # Only save if the configuration changed
-                if normalized_new_config != normalized_old_config:
-                    # Save configuration to database (will automatically archive old config if exists)
+                if not current_config or current_config.get("configuration") is None:
                     await ConfigRepo.save_config(mac_address, config_output, datetime.now())
                     print(f"Successfully captured and saved configuration for device {mac_address} ({ip})")
+                else:
+                    normalized_old_config = await DeviceService.normalize_config(current_config["configuration"])
+                    if normalized_new_config != normalized_old_config:
+                        await ConfigRepo.save_config(mac_address, config_output, datetime.now())
+                        print(f"Successfully captured and saved configuration for device {mac_address} ({ip})")
             else:
                 print(f"No configuration data retrieved for device {ip}")
                 
@@ -451,6 +454,10 @@ class DeviceService:
             if not connection:
                     await DevicesRepo.flag_device_inactive(mac_address)
                     return {"success": False, "reason": f"Failed to connect to device {ip}"}
+
+            extracted_mac = None
+            config_output = None
+
             if "cisco" in cred["device_type"]:
                 outputs = ConnectionService.get_cisco_outputs_cli(connection, cred["device_type"])
                 
@@ -483,21 +490,6 @@ class DeviceService:
                 
                 # Save to database with device_type
                 await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type, info_neighbors)
-                
-                # Save configuration to database
-                if config_output:
-                    try:
-                        normalized_new_config = await DeviceService.normalize_config(config_output)
-                        normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
-
-                        # Only save if the configuration changed
-                        if normalized_new_config != normalized_old_config:
-
-                            await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
-                            print(f"Successfully saved configuration for device {extracted_mac}")
-                    except Exception as e:
-                        print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
-                
 
             elif "juniper" in cred["device_type"]:
                 outputs = ConnectionService.get_juniper_outputs_cli(connection, cred["device_type"])
@@ -530,20 +522,26 @@ class DeviceService:
                 
                 # Save to database with device_type
                 await DevicesRepo.save_info(extracted_mac, hostname, interface_data, last_updated, raw_date, device_type)
-                
-                # Save configuration to database
-                if config_output:
-                    try:
-                        normalized_new_config = await DeviceService.normalize_config(config_output)
-                        normalized_old_config = await DeviceService.normalize_config((await DeviceService.get_current_config(ip))["configuration"])
 
-                        # Only save if the configuration changed
+            else:
+                print(f"Unsupported device type: {cred.get('device_type', 'unknown')}")
+                return {"success": False, "reason": f"Unsupported device type: {cred.get('device_type', 'unknown')}"}
+
+            if config_output and extracted_mac:
+                try:
+                    normalized_new_config = await DeviceService.normalize_config(config_output)
+                    current_config = await DeviceService.get_current_config(ip)
+
+                    if not current_config or current_config.get("configuration") is None:
+                        await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
+                        print(f"Successfully saved configuration for device {extracted_mac}")
+                    else:
+                        normalized_old_config = await DeviceService.normalize_config(current_config["configuration"])
                         if normalized_new_config != normalized_old_config:
-                            
                             await ConfigRepo.save_config(extracted_mac, config_output, datetime.now())
                             print(f"Successfully saved configuration for device {extracted_mac}")
-                    except Exception as e:
-                        print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
+                except Exception as e:
+                    print(f"Warning: Failed to save configuration for device {extracted_mac}: {e}")
 
             if connection:
                 try:
