@@ -12,7 +12,7 @@ class DeviceController:
     
 
     @staticmethod
-    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
+    async def get_one_record(ip: str) -> Optional[Dict[str, Any]]:
         return await DeviceService.get_one_record(ip)
 
 

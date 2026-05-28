@@ -90,21 +90,26 @@ class DevicesRepo:
 
 
     @staticmethod
-    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
-        """Find device(s) that have an interface with the given IP address.
-        This queries Mongo to find matching interface(s), then fetches top-level device info from Postgres."""
+    async def get_one_record(ip: str) -> Optional[Dict[str, Any]]:
+        """Return the latest combined device record for a device whose interfaces contain the given IP."""
         try:
-            matches = []
-            # Find matching interface docs in Mongo
             try:
                 docs = await MongoDevicesRepo.find_by_interface_ip(ip)
             except Exception:
                 docs = []
 
             if not docs:
-                return []
+                return None
 
-            # For each matching doc, fetch corresponding Postgres device
+            def _doc_timestamp(doc: Dict[str, Any]) -> str:
+                raw_date = doc.get("raw date")
+                if raw_date is not None:
+                    return str(raw_date)
+                last_updated = doc.get("last updated at")
+                return str(last_updated) if last_updated is not None else ""
+
+            docs.sort(key=_doc_timestamp, reverse=True)
+
             async with AsyncSessionLocal() as session:
                 for doc in docs:
                     device_id = doc.get("device_id")
@@ -113,20 +118,22 @@ class DevicesRepo:
                     q = select(Device).where(Device.id == device_id)
                     res = await session.execute(q)
                     device = res.scalar_one_or_none()
-                    if device:
-                        matches.append({
-                            "mac": device.mac,
-                            "hostname": device.hostname,
-                            "interface": doc.get("interface", []),
-                            "info_neighbors": device.info_neighbors,
-                            "last updated at": device.last_updated,
-                            "raw date": device.raw_date,
-                            "device_type": device.device_type,
-                            "status": device.status
-                        })
-            return matches
+                    if not device:
+                        continue
+
+                    return {
+                        "mac": device.mac,
+                        "hostname": device.hostname,
+                        "interface": doc.get("interface", []),
+                        "info_neighbors": device.info_neighbors,
+                        "last updated at": device.last_updated,
+                        "raw date": device.raw_date,
+                        "device_type": device.device_type,
+                        "status": device.status
+                    }
+            return None
         except Exception:
-            return []
+            return None
 
 
     @staticmethod

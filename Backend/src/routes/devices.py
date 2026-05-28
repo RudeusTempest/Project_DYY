@@ -16,7 +16,7 @@ async def get_latest_records() -> List[Dict[str, Any]]:
 
 
 @router.get("/get_one_record")
-async def get_one_record(ip: str) -> List[Dict[str, Any]]:
+async def get_one_record(ip: str) -> Dict[str, Any]:
     try:
         result = await DeviceController.get_one_record(ip)
         if not result:

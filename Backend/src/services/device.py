@@ -172,12 +172,12 @@ class DeviceService:
 
 
     @staticmethod
-    async def get_one_record(ip: str) -> List[Dict[str, Any]]:
+    async def get_one_record(ip: str) -> Optional[Dict[str, Any]]:
         try:
             return await DevicesRepo.get_one_record(ip)
         except Exception as e:
             print(f"Error getting record for IP {ip}: {e}")
-            return []
+            return None
 
 
     @staticmethod

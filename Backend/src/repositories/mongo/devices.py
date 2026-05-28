@@ -1,3 +1,4 @@
+import re
 from src.config.mongo import info_collection, archive
 from typing import Optional, List, Dict, Any
 
@@ -51,7 +52,21 @@ class DevicesRepo:
     @staticmethod
     async def find_by_interface_ip(ip: str) -> List[Dict[str, Any]]:
         try:
-            return list(info_collection.find({"interface.ip_address": ip}, {"_id": 0}))
+            if not isinstance(ip, str) or not ip.strip():
+                return []
+
+            escaped_ip = re.escape(ip.strip())
+            regex = re.compile(rf"^{escaped_ip}(?:/|$)")
+
+            return list(info_collection.find(
+                {
+                    "$or": [
+                        {"interface.ip_address": regex},
+                        {"interface.IP_Address": regex},
+                    ]
+                },
+                {"_id": 0}
+            ))
         except Exception as e:
             print(f"Error finding device by interface IP {ip}: {e}")
             return []
